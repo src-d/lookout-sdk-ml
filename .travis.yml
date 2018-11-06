@@ -1,0 +1,65 @@
+language: python
+sudo: true
+dist: xenial
+git:
+  depth: 9999999
+services:
+  - docker
+cache: pip
+before_cache:
+  - chown -R travis:travis $HOME/.cache/pip
+stages:
+  - test
+  - name: deploy
+    # require any tag name to deploy
+    if: tag =~ .*
+_install: &_install
+  - pip install --upgrade pip cython codecov
+  - pip install -e .[test]
+_before_script: &_before_script
+  - make bblfsh-start
+_coverage: &_coverage
+  - SCRIPT="coverage run --concurrency=multiprocessing -m unittest discover
+            && coverage combine"
+_deploy: &_deploy
+  provider: script
+  script: twine upload dist/*py3-none-any* -u $PYPI_LOGIN -p $PYPI_PASS
+  skip_cleanup: true
+  on:
+    tags: true
+matrix:
+  include:
+    - python: 3.5
+      env: *_coverage
+      install: *_install
+      before_script: *_before_script
+    - python: 3.6
+      env: *_coverage
+      install: *_install
+      before_script: *_before_script
+    - python: 3.7
+      env: *_coverage
+      install: *_install
+      before_script: *_before_script
+      after_success:
+      - codecov
+    - python: 3.7
+      env: SCRIPT="make check
+                   && rm -rf lookout/core/server
+                   && make docker-test"
+      install:
+        - pip install -r requirements-lint.txt
+      before_script: *_before_script
+    - stage: deploy
+      python: 3.5
+      install:
+        - pip3 install --upgrade pip
+        - pip3 install twine
+      script:
+        - python3 setup.py bdist_wheel
+      deploy: *_deploy
+  fast_finish: true
+script:
+  - (eval "$SCRIPT")
+notifications:
+  email: false
