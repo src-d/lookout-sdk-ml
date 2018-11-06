@@ -13,9 +13,6 @@ test:
 
 .PHONY: docs
 docs:
-	sphinx-apidoc -o docs/ .
-	rm docs/setup.rst docs/modules.rst
-	mkdir -p docs/_static
 	cd docs && python3 -msphinx -M html . build
 
 .PHONY: docker-build
