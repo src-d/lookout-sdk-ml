@@ -20,7 +20,7 @@ _before_script: &_before_script
   - make bblfsh-start
 _coverage: &_coverage
   - SCRIPT="coverage run --concurrency=multiprocessing -m unittest discover
-            && coverage combine"
+            && travis_retry coverage combine"
 _deploy: &_deploy
   provider: script
   script: twine upload dist/*py3-none-any* -u $PYPI_LOGIN -p $PYPI_PASS
@@ -44,11 +44,11 @@ matrix:
       after_success:
       - codecov
     - python: 3.7
-      env: SCRIPT="make check
-                   && rm -rf lookout/core/server
-                   && make docker-test"
+      env: SCRIPT="make check && make docs && make docker-test"
       install:
         - pip install -r requirements-lint.txt
+        - pip install -r docs/requirements.txt
+        - pip install -r requirements.txt
       before_script: *_before_script
     - stage: deploy
       python: 3.5

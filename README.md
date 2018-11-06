@@ -38,12 +38,12 @@ pip3 install lookout-sdk-ml
 
 ## How To Use
 
-Please refer to the [getting started guide](lookout/core/doc/getting_started.md).
+Please refer to the [getting started guide](docs/user/getting_started.md).
 
 ## Contributions
 
-Contributions are very welcome and desired! Please follow the [code of conduct](doc/code_of_conduct.md)
-and read the [contribution guidelines](doc/contributing.md).
+Contributions are very welcome and desired! Please follow the [code of conduct](docs/code_of_conduct.md)
+and read the [contribution guidelines](docs/contributing.md).
 
 ## License
 
