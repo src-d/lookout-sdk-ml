@@ -2,7 +2,7 @@ current_dir = $(shell pwd)
 
 .PHONY: check
 check:
-	! grep -R /tmp lookout/core/tests
+	! (grep -R /tmp lookout/core/tests | grep -v lookout/core/tests/server)
 	flake8 --config .flake8-code . --count
 	flake8 --config .flake8-doc . --count
 	pylint lookout
@@ -10,6 +10,13 @@ check:
 .PHONY: test
 test:
 	python3 -m unittest discover
+
+.PHONY: docs
+docs:
+	sphinx-apidoc -o docs/ .
+	rm docs/setup.rst docs/modules.rst
+	mkdir -p docs/_static
+	cd docs && python3 -msphinx -M html . build
 
 .PHONY: docker-build
 docker-build:
