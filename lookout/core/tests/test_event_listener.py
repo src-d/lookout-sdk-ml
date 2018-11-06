@@ -20,25 +20,22 @@ class Handlers(EventHandlers):
 
 
 class EventListenerTests(unittest.TestCase):
+    COMMIT_FROM = "3ac2a59275902f7252404d26680e30cc41efb837"
+    COMMIT_TO = "dce7fcba3d2151a0d5dc4b3a89cfc0911c96cf2b"
+
     def setUp(self):
         self.handlers = Handlers()
         self.port = server.find_port()
 
     def test_review(self):
         listener = EventListener("localhost:%d" % self.port, self.handlers).start()
-        server.run("review",
-                   "4984b98b0e2375e9372fbab4eb4c9cd8f0c289c6",
-                   "5833b4ba94154cf1ed07f37c32928c7b4411b36b",
-                   self.port)
+        server.run("review", self.COMMIT_FROM, self.COMMIT_TO, self.port)
         self.assertIsInstance(self.handlers.request, ReviewEvent)
         del listener
 
     def test_push(self):
         listener = EventListener("localhost:%d" % self.port, self.handlers).start()
-        server.run("push",
-                   "4984b98b0e2375e9372fbab4eb4c9cd8f0c289c6",
-                   "5833b4ba94154cf1ed07f37c32928c7b4411b36b",
-                   self.port)
+        server.run("push", self.COMMIT_FROM, self.COMMIT_TO, self.port)
         self.assertIsInstance(self.handlers.request, PushEvent)
         del listener
 

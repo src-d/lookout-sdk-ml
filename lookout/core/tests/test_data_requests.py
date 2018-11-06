@@ -17,6 +17,9 @@ from lookout.core.tests import server
 
 
 class DataRequestsTests(unittest.TestCase, EventHandlers):
+    COMMIT_FROM = "3ac2a59275902f7252404d26680e30cc41efb837"
+    COMMIT_TO = "dce7fcba3d2151a0d5dc4b3a89cfc0911c96cf2b"
+
     def setUp(self):
         self.setUpEvent = threading.Event()
         self.tearDownEvent = threading.Event()
@@ -27,7 +30,10 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
         self.data_service = DataService("localhost:10301")
         self.url = "file://" + str(Path(lookout.__file__).parent.absolute())
         self.ref = "refs/heads/master"
+        self.setUpWasSuccessful = True
         self.setUpEvent.wait()
+        if not self.setUpWasSuccessful:
+            self.fail("failed to setUp()")
 
     def tearDown(self):
         self.data_service.shutdown()
@@ -46,10 +52,11 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
         return EventResponse()
 
     def run_data_service(self):
-        server.run("push",
-                   "4984b98b0e2375e9372fbab4eb4c9cd8f0c289c6",
-                   "5833b4ba94154cf1ed07f37c32928c7b4411b36b",
-                   self.port)
+        try:
+            server.run("push", self.COMMIT_FROM, self.COMMIT_TO, self.port)
+        except Exception:
+            self.setUpWasSuccessful = False
+            self.setUpEvent.set()
 
     def test_with_changed_uasts(self):
         def func(imposter, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
@@ -68,8 +75,8 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
 
         func = with_changed_uasts(func)
         func(self,
-             ReferencePointer(self.url, self.ref, "4984b98b0e2375e9372fbab4eb4c9cd8f0c289c6"),
-             ReferencePointer(self.url, self.ref, "5833b4ba94154cf1ed07f37c32928c7b4411b36b"),
+             ReferencePointer(self.url, self.ref, self.COMMIT_FROM),
+             ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              self.data_service.get())
 
     def test_with_changed_uasts_and_contents(self):
@@ -89,15 +96,15 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
 
         func = with_changed_uasts_and_contents(func)
         func(self,
-             ReferencePointer(self.url, self.ref, "4984b98b0e2375e9372fbab4eb4c9cd8f0c289c6"),
-             ReferencePointer(self.url, self.ref, "5833b4ba94154cf1ed07f37c32928c7b4411b36b"),
+             ReferencePointer(self.url, self.ref, self.COMMIT_FROM),
+             ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              self.data_service.get())
 
     def test_with_uasts(self):
         def func(imposter, ptr: ReferencePointer, config: dict,
                  data_request_stub: DataStub, **data):
             files = list(data["files"])
-            self.assertEqual(len(files), 61)
+            self.assertEqual(len(files), 18)
             for file in files:
                 self.assertEqual(file.content, b"")
                 self.assertEqual(type(file.uast).__module__, bblfsh.Node.__module__)
@@ -107,7 +114,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
 
         func = with_uasts(func)
         func(self,
-             ReferencePointer(self.url, self.ref, "5833b4ba94154cf1ed07f37c32928c7b4411b36b"),
+             ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              None,
              self.data_service.get())
 
@@ -115,7 +122,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
         def func(imposter, ptr: ReferencePointer, config: dict,
                  data_request_stub: DataStub, **data):
             files = list(data["files"])
-            self.assertEqual(len(files), 61)
+            self.assertEqual(len(files), 18)
             for file in files:
                 if not file.path.endswith("__init__.py"):
                     self.assertGreater(len(file.content), 0, file.path)
@@ -126,7 +133,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
 
         func = with_uasts_and_contents(func)
         func(self,
-             ReferencePointer(self.url, self.ref, "5833b4ba94154cf1ed07f37c32928c7b4411b36b"),
+             ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              None,
              self.data_service.get())
 
