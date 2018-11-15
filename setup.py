@@ -30,7 +30,6 @@ setup(
     keywords=["machine learning on source code", "babelfish", "lookout"],
     install_requires=[
         "bblfsh>=2.12.6,<3.0",
-        "xxhash>=0.5.0,<2.0",
         "stringcase>=1.2.0,<2.0",
         "sqlalchemy>=1.0.0,<2.0",
         "sqlalchemy-utils>=0.33,<2.0",
@@ -39,7 +38,7 @@ setup(
         "configargparse>=0.13,<2.0",
         "humanfriendly>=4.0,<5.0",
         "psycopg2-binary>=2.7,<3.0",
-        "modelforge>=0.7.0,<2.0",
+        "modelforge>=0.8.0,<0.9.0",
         "typing;python_version<'3.5'",
     ],
     extras_require={
