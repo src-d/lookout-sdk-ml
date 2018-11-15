@@ -38,7 +38,7 @@ setup(
         "configargparse>=0.13,<2.0",
         "humanfriendly>=4.0,<5.0",
         "psycopg2-binary>=2.7,<3.0",
-        "modelforge>=0.8.0,<0.9.0",
+        "modelforge>=0.8.1,<0.9.0",
         "typing;python_version<'3.5'",
     ],
     extras_require={
