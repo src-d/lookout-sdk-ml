@@ -19,9 +19,10 @@ from lookout.core.sqla_model_repository import SQLAlchemyModelRepository
 
 class ArgumentDefaultsHelpFormatterNoNone(argparse.ArgumentDefaultsHelpFormatter):
     """
-    Pretty formatter of help message for arguments.
+    Pretty formatter of help message for arguments. \
     It adds default value to the end if it is not None.
     """
+
     def _get_help_string(self, action):
         if action.default is None:
             return action.help
@@ -30,7 +31,7 @@ class ArgumentDefaultsHelpFormatterNoNone(argparse.ArgumentDefaultsHelpFormatter
 
 def list_analyzers(args):
     """
-    Prints the list of the analyzers inside the `lookout` package.
+    Print the list of the analyzers inside the `lookout` package.
 
     :param args: Not used - parsed command line arguments.
     :return: None
@@ -61,7 +62,7 @@ def list_analyzers(args):
 
 def run_analyzers(args):
     """
-    Launches the service with the specified analyzers. Blocks until a KeyboardInterrupt.
+    Launch the service with the specified analyzers. Blocks until a KeyboardInterrupt.
 
     :param args: Parsed command line arguments.
     :return: None
@@ -93,7 +94,7 @@ def run_analyzers(args):
 
 def init_repo(args):
     """
-    Initializes the model repository.
+    Initialize the model repository.
 
     :param args: Parsed command line arguments.
     :return: None
@@ -114,7 +115,13 @@ def run_analyzer_tool(args) -> None:
         importlib.import_module(args.analyzer).run_cmdline_tool()
 
 
-def create_model_repo_from_args(args) -> SQLAlchemyModelRepository:
+def create_model_repo_from_args(args) -> SQLAlchemyModelRepository:  # noqa: D401
+    """
+    Factory function to get SQLAlchemyModelRepository.
+
+    :param args: `argparse` parsed arguments.
+    :return: Constructed instance of SQLAlchemyModelRepository.
+    """
     return SQLAlchemyModelRepository(
         db_endpoint=args.db, fs_root=args.fs,
         max_cache_mem=humanfriendly.parse_size(args.cache_size),
@@ -123,6 +130,11 @@ def create_model_repo_from_args(args) -> SQLAlchemyModelRepository:
 
 
 def add_model_repository_args(parser):
+    """
+    Add command line flags specific to the model repository.
+
+    :param parser: `argparse` parser where to add new flags.
+    """
     parser.add("-d", "--db", required=True, help="Model repository database address.")
     parser.add("-f", "--fs", required=True, help="Model repository file system root.")
     parser.add("--cache-size", default="1G",
@@ -135,13 +147,21 @@ def add_model_repository_args(parser):
 
 
 def add_logging_args(parser):
+    """
+    Add command line flags specific to logging.
+
+    :param parser: `argparse` parser where to add new flags.
+    """
     parser.add("--log-level", default="INFO", choices=logging._nameToLevel,
                help="Logging verbosity.")
     parser.add("--log-config-path",
                help="Path to the file which sets individual log levels of domains.")
 
 
-def create_parser():
+def create_parser() -> configargparse.ArgParser:
+    """
+    Initialize the command line argument parser.
+    """
     parser = configargparse.ArgParser(default_config_files=[
         "/etc/lookout/analyzer.conf", "~/.config/lookout/analyzer.conf"],
         formatter_class=ArgumentDefaultsHelpFormatterNoNone,

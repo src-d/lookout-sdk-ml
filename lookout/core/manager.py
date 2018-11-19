@@ -17,12 +17,13 @@ class AnalyzerManager(EventHandlers):
     Relies on a `ModelRepository` to retrieve and update the models. Also requires the address
     of the data (UAST, contents) gRPC service, typically running in the same Lookout server.
     """
+
     _log = logging.getLogger("AnalyzerManager")
 
     def __init__(self, analyzers: Iterable[Type[Analyzer]], model_repository: ModelRepository,
                  data_service: DataService):
         """
-        Initializes a new instance of the AnalyzerManager class.
+        Initialize a new instance of the AnalyzerManager class.
 
         :param analyzers: Analyzer types to manage (not instances!).
         :param model_repository: Injected implementor of the `ModelRepository` interface.
@@ -35,16 +36,20 @@ class AnalyzerManager(EventHandlers):
         self._data_service = data_service
 
     def __str__(self) -> str:
+        """Summarize AnalyzerManager as a string."""
         return "AnalyzerManager(%s)" % self.version
 
     @property
     def version(self) -> str:
         """
-        Version depends on all the managed analyzers.
+        Return the version string that depends on all the managed analyzers.
         """
         return " ".join(self._model_id(a) for a in self._analyzers)
 
-    def process_review_event(self, request: ReviewEvent) -> EventResponse:
+    def process_review_event(self, request: ReviewEvent) -> EventResponse:  # noqa: D401
+        """
+        Callback for review events invoked by EventListener.
+        """
         base_ptr = ReferencePointer.from_pb(request.commit_revision.base)
         head_ptr = ReferencePointer.from_pb(request.commit_revision.head)
         response = EventResponse()
@@ -76,7 +81,10 @@ class AnalyzerManager(EventHandlers):
         response.comments.extend(comments)
         return response
 
-    def process_push_event(self, request: PushEvent) -> EventResponse:
+    def process_push_event(self, request: PushEvent) -> EventResponse:  # noqa: D401
+        """
+        Callback for push events invoked by EventListener.
+        """
         ptr = ReferencePointer.from_pb(request.commit_revision.head)
         for analyzer in self._analyzers:
             if analyzer.model_type == DummyAnalyzerModel:
@@ -94,8 +102,8 @@ class AnalyzerManager(EventHandlers):
 
     def warmup(self, urls: Sequence[str]):
         """
-        Warms up the model cache (which supposedly exists in the injected `ModelRepository`).
-        We get the models corresponding to the managed analyzers and the specified list of
+        Warm up the model cache (which supposedly exists in the injected `ModelRepository`). \
+        We get the models corresponding to the managed analyzers and the specified list of \
         repositories.
 
         :param urls: The list of Git repositories for which to fetch the models.

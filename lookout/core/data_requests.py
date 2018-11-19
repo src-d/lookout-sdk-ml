@@ -16,19 +16,26 @@ class DataService:
     """
     Retrieves UASTs/files from the Lookout server.
     """
+
     GRPC_MAX_MESSAGE_SIZE = 100 * 1024 * 1024
 
     def __init__(self, address: str):
+        """
+        Initialize a new instance of DataService.
+
+        :param address: GRPC endpoint to use.
+        """
         self._data_request_local = threading.local()
         self._data_request_channels = []
         self._data_request_address = address
 
     def __str__(self):
+        """Summarize the DataService instance as a string."""
         return "DataService(%s)" % self._data_request_address
 
     def get(self) -> DataStub:
         """
-        Returns a `DataStub` for the current thread.
+        Return a `DataStub` for the current thread.
         """
         stub = getattr(self._data_request_local, "stub", None)
         if stub is None:
@@ -42,17 +49,18 @@ class DataService:
 
     def shutdown(self):
         """
-        Closes all the open network connections.
+        Close all the open network connections.
         """
         for channel in self._data_request_channels:
             channel.close()
 
 
-def with_changed_uasts(func):
+def with_changed_uasts(func):  # noqa: D401
     """
-    Use this decorator to provide "changes" keyword argument to `**data` in `Analyzer.analyze()`.
+    Decorator to provide "changes" keyword argument to `**data` in `Analyzer.analyze()`.
+
     "changes" contain the list of `Change` - see lookout/core/server/sdk/service_data.proto.
-    The changes will have only UASTs.
+    The changes will have only UASTs, no raw file contents.
 
     :param func: Method with the signature compatible with `Analyzer.analyze()`.
     :return: The decorated method.
@@ -67,9 +75,10 @@ def with_changed_uasts(func):
     return wrapped_with_changed_uasts
 
 
-def with_changed_uasts_and_contents(func):
+def with_changed_uasts_and_contents(func):  # noqa: D401
     """
-    Use this decorator to provide "changes" keyword argument to `**data` in `Analyzer.analyze()`.
+    Decorator to provide "changes" keyword argument to `**data` in `Analyzer.analyze()`.
+
     "changes" contain the list of `Change` - see lookout/core/server/sdk/service_data.proto.
     The changes will have both UASTs and raw file contents.
 
@@ -86,9 +95,10 @@ def with_changed_uasts_and_contents(func):
     return wrapped_with_changed_uasts_and_contents
 
 
-def with_uasts(func):
+def with_uasts(func):  # noqa: D401
     """
-    Use this decorator to provide "files" keyword argument to `**data` in `Analyzer.train()`.
+    Decorator to provide "files" keyword argument to `**data` in `Analyzer.train()`.
+
     "files" are the list of `File`-s with all the UASTs for the passed Git repository URL and
     revision, see lookout/core/server/sdk/service_data.proto.
 
@@ -104,9 +114,10 @@ def with_uasts(func):
     return wrapped_with_uasts
 
 
-def with_uasts_and_contents(func):
+def with_uasts_and_contents(func):  # noqa: D401
     """
-    Use this decorator to provide "files" keyword argument to `**data` in `Analyzer.train()`.
+    Decorator to provide "files" keyword argument to `**data` in `Analyzer.train()`.
+
     "files" are the list of `File`-s with all the UASTs and raw file contents for the passed Git
     repository URL and revision, see lookout/core/server/sdk/service_data.proto.
 
@@ -125,7 +136,7 @@ def with_uasts_and_contents(func):
 def request_changes(stub: DataStub, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                     contents: bool, uast: bool) -> Iterable[Change]:
     """
-    Used by `with_changed_uasts()`.
+    Invoke GRPC API and get the changes. Used by `with_changed_uasts()` and Review events.
 
     :return: The stream of the gRPC invocation results. In theory, `.result()` would turn this \
              into a synchronous call, but in practice, that function call hangs for some reason.
@@ -141,7 +152,7 @@ def request_changes(stub: DataStub, ptr_from: ReferencePointer, ptr_to: Referenc
 def request_files(stub: DataStub, ptr: ReferencePointer, contents: bool, uast: bool
                   ) -> Iterable[File]:
     """
-    Used by `with_uasts()`.
+    Invoke GRPC API and get the files. Used by `with_uasts()` and Push events.
 
     :return: The stream of the gRPC invocation results.
     """

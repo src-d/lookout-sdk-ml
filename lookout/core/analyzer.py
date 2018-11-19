@@ -14,11 +14,19 @@ class ReferencePointer(NamedTuple("ReferencePointer", (("url", str),
     """
     We redefine ReferencePointer because Protocol Buffers message objects suck.
     """
+
     @staticmethod
-    def from_pb(refptr) -> "ReferencePointer":
+    def from_pb(refptr: ApiReferencePointer) -> "ReferencePointer":
+        """
+        Convert from ReferencePointer defined in protocol buffers to our own Python-friendly \
+        pointer.
+        """
         return ReferencePointer(*[f[1] for f in refptr.ListFields()])
 
     def to_pb(self) -> ApiReferencePointer:
+        """
+        Convert to ReferencePointer defined in protocol buffers.
+        """
         return ApiReferencePointer(internal_repository_url=self.url,
                                    reference_name=self.ref,
                                    hash=self.commit)
@@ -28,13 +36,16 @@ class AnalyzerModel(Model):
     """
     All models used in `Analyzer`-s must derive from this base class.
     """
-    def __init__(self, **kwargs):
+
+    def __init__(self, **kwargs):  # noqa: D401
         """
+        Prepare a dummy instance of the model. We expect that `load()` or `construct()` will be \
+        called afterwards.
+
         Defines:
         `name` - name of the model. Corresponds to the bound analyzer's class name and version.
-        `url` - Git repository on which the model was trained.
-        `commit` - revision of the Git repository on which the model was trained.
-        :param kwargs: passed to the upstream __init__.
+        `ptr` - state of the Git repository on which the model was trained.
+        :param kwargs: passed to the upstream's `__init__`.
         """
         super().__init__(**kwargs)
         self.name = "<unknown name>"
@@ -42,7 +53,7 @@ class AnalyzerModel(Model):
 
     def construct(self, analyzer: Type["Analyzer"], ptr: ReferencePointer):
         """
-        Initialization of the model (__init__ is empty to allow load()).
+        Initialize the model (`__init__` does not do the real work to allow `load()`).
 
         :param analyzer: Bound type of the `Analyzer`. Not instance!
         :param ptr: Git repository state pointer.
@@ -56,7 +67,7 @@ class AnalyzerModel(Model):
 
     def dump(self) -> str:
         """
-        Implements the upstream abstract method.
+        Satisfy the upstream's abstract method.
 
         :return: summary text of the model.
         """
@@ -67,6 +78,7 @@ class DummyAnalyzerModel(AnalyzerModel):
     """
     Stub for stateless analyzers.
     """
+
     NAME = "dummy"
     VENDOR = "public domain"
 
@@ -79,7 +91,7 @@ class DummyAnalyzerModel(AnalyzerModel):
 
 class Analyzer:
     """
-    Interface of all the analyzers. Each analyzer uses a model to run the analysis and generates
+    Interface of all the analyzers. Each analyzer uses a model to run the analysis and generates \
     a model as the result of the training.
 
     `version` allows to version the models. It is checked in the model repository and if it does
@@ -87,12 +99,15 @@ class Analyzer:
     `model_type` points to the specific derivative of AnalyzerModel - type of the model used
     in analyze() and generated in train().
     """
+
     version = None  # type: str
     model_type = None  # type: Type[AnalyzerModel]
     name = None  # type: str
 
     def __init__(self, model: AnalyzerModel, url: str, config: Mapping[str, Any]):
         """
+        Initialize a new instance of Analyzer. A call to `analyze()` is expected after.
+
         :param model: The instance of the model loaded from the repository or freshly trained.
         :param url: The analyzed project's Git remote.
         :param config: Configuration of the analyzer of unspecified structure.
@@ -104,7 +119,9 @@ class Analyzer:
     def analyze(self, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                 data_request_stub: DataStub, **data) -> List[Comment]:
         """
-        This is called on Review events. It must return the list of `Comment`-s - found review
+        Run the analysis on the specified Git repository state.
+
+        This is called on Review events. It must return the list of `Comment`-s - found review \
         suggestions.
 
         :param ptr_from: The Git revision of the fork point. Exists in both the original and \
@@ -123,7 +140,7 @@ class Analyzer:
     def train(cls, ptr: ReferencePointer, config: Mapping[str, Any],
               data_request_stub: DataStub, **data) -> AnalyzerModel:
         """
-        Generates a new model on top of the specified source code.
+        Generate a new model on top of the specified source code.
 
         :param ptr: Git repository state pointer.
         :param config: Configuration of the training of unspecified structure.
@@ -137,4 +154,10 @@ class Analyzer:
 
     @classmethod
     def construct_model(cls, ptr: ReferencePointer) -> AnalyzerModel:
+        """
+        Produce a new empty model associated with this analyzer.
+
+        :param ptr: state of Git repository which is used to generate the model.
+        :return: Instance of the model.
+        """
         return cls.model_type().construct(cls, ptr)

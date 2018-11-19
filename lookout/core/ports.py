@@ -10,6 +10,7 @@ if sys.version_info[:2] == (3, 5):
     # This is not a real generic class.  Don't use outside annotations.
     class Type(Generic[CT_co], extra=type):
         """A special construct usable to annotate class objects.
+
         For example, suppose we have the following classes::
           class User: ...  # Abstract base for User classes
           class BasicUser(User): ...
