@@ -13,7 +13,7 @@ from lookout.core.data_requests import (DataService,
                                         with_changed_uasts, with_changed_uasts_and_contents,
                                         with_uasts, with_uasts_and_contents)
 from lookout.core.event_listener import EventHandlers, EventListener
-from lookout.core.tests import server
+from lookout.core.test_helpers import server
 
 
 class DataRequestsTests(unittest.TestCase, EventHandlers):

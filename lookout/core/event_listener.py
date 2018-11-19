@@ -3,6 +3,7 @@ import functools
 import logging
 from threading import Event
 import time
+from typing import Any, Dict
 
 import grpc
 import stringcase
@@ -14,7 +15,8 @@ from lookout.core.api.service_analyzer_pb2_grpc import (add_AnalyzerServicer_to_
                                                         AnalyzerServicer)
 
 
-def extract_review_event_context(request: ReviewEvent):
+def extract_review_event_context(request: ReviewEvent) -> Dict[str, Any]:
+    """Extract a structured logging context from the review event."""
     return {
         "type": "ReviewEvent",
         "url_base": request.commit_revision.base.internal_repository_url,
@@ -24,7 +26,8 @@ def extract_review_event_context(request: ReviewEvent):
     }
 
 
-def extract_push_event_context(request: PushEvent):
+def extract_push_event_context(request: PushEvent) -> Dict[str, Any]:
+    """Extract a structured logging context from the push event."""
     return {
         "type": "PushEvent",
         "url": request.commit_revision.head.internal_repository_url,
@@ -43,17 +46,25 @@ class EventHandlers:
     """
     Interface of the classes which process Lookout gRPC events.
     """
-    def process_review_event(self, request: ReviewEvent) -> EventResponse:
+
+    def process_review_event(self, request: ReviewEvent) -> EventResponse:  # noqa: D401
+        """
+        Callback for review events invoked by EventListener.
+        """
         raise NotImplementedError
 
-    def process_push_event(self, request: PushEvent) -> EventResponse:
+    def process_push_event(self, request: PushEvent) -> EventResponse:  # noqa: D401
+        """
+        Callback for push events invoked by EventListener.
+        """
         raise NotImplementedError
 
 
 class EventListener(AnalyzerServicer):
     """
     gRPC ninja which listens to the events coming from the Lookout server.
-    So far it supports two events: NotifyReviewEvent and NotifyPushEvent. Both receivers are
+
+    So far it supports two events: NotifyReviewEvent and NotifyPushEvent. Both receivers are \
     decorated heavily to reduce the amount of duplicated code to zero.
 
     Usage:
@@ -61,10 +72,18 @@ class EventListener(AnalyzerServicer):
     >>> handlers = EventHandlers()
     >>> EventListener("0.0.0.0:1234", handlers).start().block()
 
-    gRPC calls are operated in a separate thread pool. Thus the main thread has nothing to do
+    gRPC calls are operated in a separate thread pool. Thus the main thread has nothing to do \
     and needs to be suspended.
     """
+
     def __init__(self, address: str, handlers: EventHandlers, n_workers: int=1):
+        """
+        Initialize a new instance of EventListener.
+
+        :param address: GRPC endpoint to connect to.
+        :param handlers: Event callbacks which actually do the real work.
+        :param n_workers: Number of threads in the thread pool which processes incoming events.
+        """
         self._server = grpc.server(ThreadPoolExecutor(max_workers=n_workers),
                                    maximum_concurrent_rpcs=n_workers)
         self._server.address = address
@@ -76,11 +95,12 @@ class EventListener(AnalyzerServicer):
         self._log = logging.getLogger(type(self).__name__)
 
     def __str__(self) -> str:
+        """Summarize the instance of EventListener as a string."""
         return "EventListener(%s, %d workers)" % (self._server.address, self._server.n_workers)
 
     def start(self):
         """
-        Starts the gRPC server. Does *not* block.
+        Start the gRPC server. Does *not* block.
 
         :return: self
         """
@@ -89,7 +109,7 @@ class EventListener(AnalyzerServicer):
 
     def block(self):
         """
-        Blocks the calling thread until a KeyboardInterrupt is triggered.
+        Block the calling thread until a KeyboardInterrupt is triggered.
 
         :return: None
         """
@@ -101,7 +121,7 @@ class EventListener(AnalyzerServicer):
 
     def stop(self, cancel_running=False):
         """
-        Forces the gRPC server to terminate.
+        Force the gRPC server to terminate.
 
         :param cancel_running: If True, performs a very impolite and sudden termination of all \
                                the threads in the thread pool.
@@ -110,7 +130,7 @@ class EventListener(AnalyzerServicer):
         self._stop_event.set()
         self._server.stop(None if cancel_running else 0)
 
-    def timeit(func):
+    def timeit(func):  # noqa: D401
         """
         Decorator which measures the elapsed time via `time.perf_counter()`.
 
@@ -129,7 +149,7 @@ class EventListener(AnalyzerServicer):
 
     def set_logging_context(func):
         """
-        Assigns the metadata of the current gRPC call to the thread-local logging context.
+        Assign the metadata of the current gRPC call to the thread-local logging context. \
         Thus it is associated with the running thread in the pool until a new event is fired.
 
         :return: The decorated function.
@@ -150,8 +170,8 @@ class EventListener(AnalyzerServicer):
 
     def log_exceptions(func):
         """
-        Performs the top-level exception handling. In case of an error, catches it gracefully
-        and converts into a nicer gRPC error message.
+        Perform the top-level exception handling. In case of an error, catch it gracefully \
+        and convert to a nicer gRPC error message.
 
         :return: The decorated function.
         """
@@ -172,7 +192,7 @@ class EventListener(AnalyzerServicer):
 
     def handle(func):
         """
-        Runs the corresponding callback from `handlers`.
+        Run the corresponding callback from `handlers`.
 
         :return: The decorated function.
         """
@@ -188,9 +208,9 @@ class EventListener(AnalyzerServicer):
     @log_exceptions
     @handle
     def NotifyReviewEvent(self, request: ReviewEvent, context: grpc.ServicerContext) \
-            -> EventResponse:
+            -> EventResponse:  # noqa: D401
         """
-        Fired on `ReviewEvent`-s. Returns `EventResponse`. See
+        Fired on `ReviewEvent`-s. Returns `EventResponse`. See \
         lookout/core/server/sdk/event.proto and lookout/core/server/sdk/service_analyzer.proto.
 
         The actual result is returned in `handle()` decorator.
@@ -203,7 +223,8 @@ class EventListener(AnalyzerServicer):
     @timeit
     @log_exceptions
     @handle
-    def NotifyPushEvent(self, request: PushEvent, context: grpc.ServicerContext) -> EventResponse:
+    def NotifyPushEvent(self, request: PushEvent, context: grpc.ServicerContext) \
+            -> EventResponse:  # noqa: D401
         """
         Fired on `PushEvent`-s. Returns nothing - we are not supposed to answer anything.
 

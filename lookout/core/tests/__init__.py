@@ -1,5 +1,4 @@
-from lookout.core.tests import server
+from lookout.core.test_helpers import server
 
-
-if not server.file.exists():
+if not server.exefile.exists():
     server.fetch()

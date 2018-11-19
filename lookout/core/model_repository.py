@@ -8,10 +8,11 @@ class ModelRepository:
     """
     Interface to retrieve and update the ML models. Injected into `AnalyzerManager`.
     """
+
     def get(self, model_id: str, model_type: Type[AnalyzerModel],
             url: str) -> Tuple[Optional[AnalyzerModel], bool]:
         """
-        Returns the model for the specified key (`model_id`) and the repository (`url`).
+        Return the model for the specified key (`model_id`) and the repository (`url`). \
         `model_type` is used to return the correct class instance.
 
         :param model_id: The key of the model (based on the bound analyzer name and version).
@@ -25,8 +26,8 @@ class ModelRepository:
 
     def set(self, model_id: str, url: str, model: AnalyzerModel):
         """
-        Puts the new model into the storage for the specified key (`model_id`) and the
-        repository (`url`).
+        Put the new model into the storage for the specified key (`model_id`) and \
+        the repository (`url`).
 
         :param model_id: The key of the model (based on the bound analyzer name and version).
         :param url: Git repository remote.
@@ -37,13 +38,12 @@ class ModelRepository:
 
     def init(self):
         """
-        Initializes the persistent data structures of this storage.
-        :return: None
+        Initialize the persistent data structures of this storage.
         """
         raise NotImplementedError
 
     def shutdown(self):
         """
-        Frees the resources allocated by the storage.
+        Free the resources allocated by the storage.
         """
         raise NotImplementedError
