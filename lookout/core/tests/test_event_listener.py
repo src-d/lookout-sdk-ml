@@ -3,7 +3,7 @@ import unittest
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import EventResponse
 from lookout.core.event_listener import EventHandlers, EventListener
-from lookout.core.tests import server
+from lookout.core.test_helpers import server
 
 
 class Handlers(EventHandlers):

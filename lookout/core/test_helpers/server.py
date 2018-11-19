@@ -9,13 +9,14 @@ import socket
 import subprocess
 import sys
 import tarfile
+import tempfile
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
 from lookout.core.api.version import __version__ as binver
 
 
-file = pathlib.Path(__file__).parent / "server"
+exefile = pathlib.Path(tempfile.gettempdir()) / "lookout-sdk-ml-tests" / "server"
 
 
 def fetch():
@@ -23,6 +24,7 @@ def fetch():
     Fetch corresponding lookout-sdk executable.
     """
     log = logging.getLogger("fetch")
+    exefile.parent.mkdir(exist_ok=True)
     try:
         buffer = io.BytesIO()
         with urlopen("https://github.com/src-d/lookout/releases/download/"
@@ -31,16 +33,16 @@ def fetch():
             copyfileobj(response, buffer)
         buffer.seek(0)
         with tarfile.open(fileobj=buffer, mode="r:gz") as tar:
-            with file.open("wb") as fout:
+            with exefile.open("wb") as fout:
                 copyfileobj(tar.extractfile("lookout-sdk_linux_amd64/lookout-sdk"), fout)
-        os.chmod(str(file), 0o775)
+        os.chmod(str(exefile), 0o775)
     except HTTPError as e:
         if e.code == 404:
             log.error("Release %s for %s platform is missing." % (binver, sys.platform))
         raise e from None
     except Exception as e:
-        if file.exists():
-            os.remove(str(file))
+        if exefile.exists():
+            os.remove(str(exefile))
         raise e from None
 
 
@@ -56,7 +58,7 @@ def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".", config_json: st
     :param config_json: Corresponds to --config-json flag.
     """
     command = [
-        str(file), cmd, "-v", "ipv4://localhost:%d" % port,
+        str(exefile), cmd, "-v", "ipv4://localhost:%d" % port,
         "--from", fr,
         "--to", to,
         "--git-dir", git_dir,
