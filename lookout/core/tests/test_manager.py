@@ -1,6 +1,8 @@
 from typing import Tuple
 import unittest
 
+from google.protobuf.struct_pb2 import Struct as ProtobufStruct
+
 from lookout.core.analyzer import Analyzer, AnalyzerModel, DummyAnalyzerModel, ReferencePointer
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import Comment, EventResponse
@@ -148,6 +150,28 @@ class AnalyzerManagerTests(unittest.TestCase):
         self.assertIsInstance(self.model_repository.set_calls[1][2], FakeModel)
         self.assertEqual(FakeAnalyzer.stub, "XXX")
         self.assertFalse(FakeDummyAnalyzer.trained)
+
+
+class AnalyzerManagerUtilsTests(unittest.TestCase):
+    def test_protobuf_struct_to_dict(self):
+        struct_to_dict = AnalyzerManager._protobuf_struct_to_dict
+        proto_struct = ProtobufStruct()
+        self.assertEqual(struct_to_dict(proto_struct), {})
+        proto_struct["a"] = 1.
+        self.assertEqual(struct_to_dict(proto_struct), {"a": 1.})
+        proto_struct["b"] = {}  # converts to ProtobufStruct automatically
+        self.assertEqual(struct_to_dict(proto_struct), {"a": 1., "b": {}})
+        proto_struct["b"]["c"] = 2.
+        self.assertEqual(struct_to_dict(proto_struct), {"a": 1., "b": {"c": 2.}})
+        proto_struct["b"]["d"] = []  # converts to Protobuf List automatically
+        self.assertEqual(struct_to_dict(proto_struct), {"a": 1., "b": {"c": 2., "d": []}})
+        proto_struct["b"]["d"].append(3.)
+        self.assertEqual(struct_to_dict(proto_struct), {"a": 1., "b": {"c": 2., "d": [3.]}})
+        proto_struct["b"]["d"].append({})  # converts to ProtobufStruct automatically
+        self.assertEqual(struct_to_dict(proto_struct), {"a": 1., "b": {"c": 2., "d": [3., {}]}})
+        proto_struct["b"]["d"][1]["e"] = 4.
+        self.assertEqual(struct_to_dict(proto_struct),
+                         {"a": 1., "b": {"c": 2., "d": [3., {"e": 4.}]}})
 
 
 if __name__ == "__main__":
