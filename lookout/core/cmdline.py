@@ -8,8 +8,8 @@ from unittest.mock import patch
 
 import configargparse
 import humanfriendly
-
 import lookout
+
 from lookout.core import slogging
 from lookout.core.data_requests import DataService
 from lookout.core.event_listener import EventListener

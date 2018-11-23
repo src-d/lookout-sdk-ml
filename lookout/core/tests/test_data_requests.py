@@ -4,7 +4,7 @@ import unittest
 
 import bblfsh
 
-import lookout
+import lookout.core
 from lookout.core.analyzer import ReferencePointer
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import EventResponse
@@ -14,6 +14,7 @@ from lookout.core.data_requests import (DataService,
                                         with_uasts, with_uasts_and_contents)
 from lookout.core.event_listener import EventHandlers, EventListener
 from lookout.core.test_helpers import server
+import lookout.core.tests
 
 
 class DataRequestsTests(unittest.TestCase, EventHandlers):
@@ -28,7 +29,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
         self.server_thread = threading.Thread(target=self.run_data_service)
         self.server_thread.start()
         self.data_service = DataService("localhost:10301")
-        self.url = "file://" + str(Path(lookout.__file__).parent.absolute())
+        self.url = "file://" + str(Path(lookout.core.__file__).parent.parent.absolute())
         self.ref = "refs/heads/master"
         self.setUpWasSuccessful = True
         self.setUpEvent.wait()
@@ -54,7 +55,8 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
     def run_data_service(self):
         try:
             server.run("push", self.COMMIT_FROM, self.COMMIT_TO, self.port)
-        except Exception:
+        except Exception as e:
+            print(type(e).__name__, e)
             self.setUpWasSuccessful = False
             self.setUpEvent.set()
 

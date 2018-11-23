@@ -1,6 +1,9 @@
 import logging
 from typing import Iterable, Sequence
 
+from google.protobuf.struct_pb2 import ListValue as ProtobufList
+from google.protobuf.struct_pb2 import Struct as ProtobufStruct
+
 from lookout.core.analyzer import Analyzer, DummyAnalyzerModel, ReferencePointer
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import EventResponse
@@ -57,7 +60,7 @@ class AnalyzerManager(EventHandlers):
         comments = []
         for analyzer in self._analyzers:
             try:
-                mycfg = dict(request.configuration[analyzer.name])
+                mycfg = self._protobuf_struct_to_dict(request.configuration[analyzer.name])
                 self._log.info("%s config: %s", analyzer.name, mycfg)
             except (KeyError, ValueError):
                 mycfg = {}
@@ -91,7 +94,7 @@ class AnalyzerManager(EventHandlers):
                 continue
             self._log.debug("training %s", analyzer.name)
             try:
-                mycfg = dict(request.configuration[analyzer.name])
+                mycfg = self._protobuf_struct_to_dict(request.configuration[analyzer.name])
             except (KeyError, ValueError):
                 mycfg = {}
             model = analyzer.train(ptr, mycfg, self._data_service.get())
@@ -116,3 +119,24 @@ class AnalyzerManager(EventHandlers):
     @staticmethod
     def _model_id(analyzer: Type[Analyzer]) -> str:
         return "%s/%s" % (analyzer.name, analyzer.version)
+
+    @staticmethod
+    def _protobuf_struct_to_dict(configuration: ProtobufStruct) -> dict:
+        mycfg = dict(configuration)
+        stack = [mycfg]
+        while stack:
+            d = stack.pop()
+            if isinstance(d, dict):
+                keyiter = iter(d)
+            elif isinstance(d, list):
+                keyiter = range(len(d))
+            else:
+                keyiter = []
+            for key in keyiter:
+                if isinstance(d[key], ProtobufStruct):
+                    d[key] = dict(d[key])
+                    stack.append(d[key])
+                elif isinstance(d[key], ProtobufList):
+                    d[key] = list(d[key])
+                    stack.append(d[key])
+        return mycfg
