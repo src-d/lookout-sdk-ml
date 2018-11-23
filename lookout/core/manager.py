@@ -127,19 +127,16 @@ class AnalyzerManager(EventHandlers):
         while stack:
             d = stack.pop()
             if isinstance(d, dict):
-                for key in d:
-                    if isinstance(d[key], ProtobufStruct):
-                        d[key] = dict(d[key])
-                        stack.append(d[key])
-                    elif isinstance(d[key], ProtobufList):
-                        d[key] = list(d[key])
-                        stack.append(d[key])
+                keyiter = iter(d)
             elif isinstance(d, list):
-                for i in range(len(d)):
-                    if isinstance(d[i], ProtobufStruct):
-                        d[i] = dict(d[i])
-                        stack.append(d[i])
-                    elif isinstance(d[i], ProtobufList):
-                        d[i] = list(d[i])
-                        stack.append(d[i])
+                keyiter = range(len(d))
+            else:
+                keyiter = []
+            for key in keyiter:
+                if isinstance(d[key], ProtobufStruct):
+                    d[key] = dict(d[key])
+                    stack.append(d[key])
+                elif isinstance(d[key], ProtobufList):
+                    d[key] = list(d[key])
+                    stack.append(d[key])
         return mycfg
