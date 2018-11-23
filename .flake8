@@ -7,5 +7,5 @@ exclude=
     docs
 inline-quotes="
 import-order-style=appnexus
-application-package-names=lookout
+application-package-names=lookout.core
 per-file-ignores=**/tests/*:D
