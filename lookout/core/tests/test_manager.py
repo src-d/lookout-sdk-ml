@@ -1,12 +1,14 @@
 from typing import Tuple
 import unittest
 
+import bblfsh
 from google.protobuf.struct_pb2 import Struct as ProtobufStruct
 
 from lookout.core.analyzer import Analyzer, AnalyzerModel, DummyAnalyzerModel, ReferencePointer
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import Comment, EventResponse
 from lookout.core.api.service_data_pb2_grpc import DataStub
+from lookout.core.data_requests import DataService
 from lookout.core.manager import AnalyzerManager
 from lookout.core.model_repository import ModelRepository
 from lookout.core.ports import Type
@@ -25,23 +27,23 @@ class FakeAnalyzer(Analyzer):
     model_type = FakeModel
     name = "fake.analyzer.FakeAnalyzer"
     instance = None
-    stub = None
+    service = None
 
     def __init__(self, model: AnalyzerModel, url: str, config: dict):
         super().__init__(model, url, config)
         FakeAnalyzer.instance = self
 
     def analyze(self, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
-                data_request_stub: DataStub, **data) -> [Comment]:
+                data_service: DataService, **data) -> [Comment]:
         comment = Comment()
         comment.text = "%s|%s" % (ptr_from.commit, ptr_to.commit)
-        FakeAnalyzer.stub = data_request_stub
+        FakeAnalyzer.service = data_service
         return [comment]
 
     @classmethod
-    def train(cls, ptr: ReferencePointer, config: dict, data_request_stub: DataStub, **data
+    def train(cls, ptr: ReferencePointer, config: dict, data_service: DataService, **data
               ) -> AnalyzerModel:
-        cls.stub = data_request_stub
+        cls.service = data_service
         return FakeModel()
 
 
@@ -59,20 +61,23 @@ class FakeDummyAnalyzer(Analyzer):
         FakeDummyAnalyzer.instance = self
 
     def analyze(self, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
-                data_request_stub: DataStub, **data) -> [Comment]:
+                data_service: DataService, **data) -> [Comment]:
         self.analyzed = True
         return []
 
     @classmethod
-    def train(cls, ptr: ReferencePointer, config: dict, data_request_stub: DataStub, **data
+    def train(cls, ptr: ReferencePointer, config: dict, data_service: DataService, **data
               ) -> AnalyzerModel:
         cls.trained = True
         return DummyAnalyzerModel()
 
 
 class FakeDataService:
-    def get(self) -> DataStub:
+    def get_data(self) -> DataStub:
         return "XXX"
+
+    def get_bblfsh(self) -> bblfsh.aliases.ProtocolServiceStub:
+        return "YYY"
 
     def shutdown(self):
         pass
@@ -127,7 +132,7 @@ class AnalyzerManagerTests(unittest.TestCase):
         self.assertEqual(self.model_repository.get_calls,
                          [("fake.analyzer.FakeAnalyzer/1", FakeModel, "foo")] * 2)
         self.assertEqual(FakeAnalyzer.instance.config["one"], "two")
-        self.assertEqual(FakeAnalyzer.stub, "XXX")
+        self.assertEqual(FakeAnalyzer.service.get_data(), "XXX")
         self.assertTrue(FakeDummyAnalyzer.instance.analyzed)
 
     def test_process_push_event(self):
@@ -148,7 +153,7 @@ class AnalyzerManagerTests(unittest.TestCase):
         self.assertEqual(self.model_repository.set_calls[1][:2],
                          ("fake.analyzer.FakeAnalyzer/1", "wow"))
         self.assertIsInstance(self.model_repository.set_calls[1][2], FakeModel)
-        self.assertEqual(FakeAnalyzer.stub, "XXX")
+        self.assertEqual(FakeAnalyzer.service.get_bblfsh(), "YYY")
         self.assertFalse(FakeDummyAnalyzer.trained)
 
 

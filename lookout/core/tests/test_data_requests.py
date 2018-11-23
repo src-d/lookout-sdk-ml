@@ -8,8 +8,7 @@ import lookout.core
 from lookout.core.analyzer import ReferencePointer
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import EventResponse
-from lookout.core.api.service_data_pb2_grpc import DataStub
-from lookout.core.data_requests import (DataService,
+from lookout.core.data_requests import (DataService, parse_uast,
                                         with_changed_uasts, with_changed_uasts_and_contents,
                                         with_uasts, with_uasts_and_contents)
 from lookout.core.event_listener import EventHandlers, EventListener
@@ -62,7 +61,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
 
     def test_with_changed_uasts(self):
         def func(imposter, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
-                 data_request_stub: DataStub, **data):
+                 data_service: DataService, **data):
             changes = list(data["changes"])
             self.assertEqual(len(changes), 1)
             change = changes[0]
@@ -79,11 +78,11 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
         func(self,
              ReferencePointer(self.url, self.ref, self.COMMIT_FROM),
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
-             self.data_service.get())
+             self.data_service)
 
     def test_with_changed_uasts_and_contents(self):
         def func(imposter, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
-                 data_request_stub: DataStub, **data):
+                 data_service: DataService, **data):
             changes = list(data["changes"])
             self.assertEqual(len(changes), 1)
             change = changes[0]
@@ -100,11 +99,11 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
         func(self,
              ReferencePointer(self.url, self.ref, self.COMMIT_FROM),
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
-             self.data_service.get())
+             self.data_service)
 
     def test_with_uasts(self):
         def func(imposter, ptr: ReferencePointer, config: dict,
-                 data_request_stub: DataStub, **data):
+                 data_service: DataService, **data):
             files = list(data["files"])
             self.assertEqual(len(files), 18)
             for file in files:
@@ -118,11 +117,11 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
         func(self,
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              None,
-             self.data_service.get())
+             self.data_service)
 
     def test_with_uasts_and_contents(self):
         def func(imposter, ptr: ReferencePointer, config: dict,
-                 data_request_stub: DataStub, **data):
+                 data_service: DataService, **data):
             files = list(data["files"])
             self.assertEqual(len(files), 18)
             for file in files:
@@ -137,7 +136,11 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
         func(self,
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              None,
-             self.data_service.get())
+             self.data_service)
+
+    def test_babelfish(self):
+        uast = parse_uast(self.data_service.get_bblfsh(), "print('hello')", "hello.py")
+        self.assertIsInstance(uast, bblfsh.Node)
 
 
 if __name__ == "__main__":

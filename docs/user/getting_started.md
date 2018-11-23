@@ -47,8 +47,8 @@ from bblfsh import Node
 from lookout.core.analyzer import Analyzer, AnalyzerModel, ReferencePointer
 from lookout.core.api.service_analyzer_pb2 import Comment
 from lookout.core.api.service_data_pb2 import Change, File
-from lookout.core.api.service_data_pb2_grpc import DataStub
-from lookout.core.data_requests import with_changed_uasts_and_contents, with_uasts_and_contents
+from lookout.core.data_requests import DataService, \
+    with_changed_uasts_and_contents, with_uasts_and_contents
 
 
 class MyModel(AnalyzerModel):
@@ -71,7 +71,7 @@ class MyAnalyzer(Analyzer):
 
     @with_changed_uasts_and_contents
     def analyze(self, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
-                data_request_stub: DataStub, changes: Iterable[Change]) -> [Comment]:
+                data_service: DataService, changes: Iterable[Change]) -> [Comment]:
         self._log.info("analyze %s %s", ptr_from.commit, ptr_to.commit)
         comments = []
         for change in changes:
@@ -87,7 +87,7 @@ class MyAnalyzer(Analyzer):
 
     @classmethod
     @with_uasts_and_contents
-    def train(cls, ptr: ReferencePointer, config: Dict[str, Any], data_request_stub: DataStub,
+    def train(cls, ptr: ReferencePointer, config: Dict[str, Any], data_service: DataService,
               files: Iterable[File]) -> AnalyzerModel:
         cls._log.info("train %s %s", ptr.url, ptr.commit)
         model = cls.construct_model(ptr)
