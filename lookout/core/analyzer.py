@@ -60,7 +60,7 @@ class AnalyzerModel(Model):
         """
         assert isinstance(self, analyzer.model_type)
         self.name = analyzer.name
-        self.version = [analyzer.version]
+        self.derive([analyzer.version])
         self.ptr = ptr
         return self
 
