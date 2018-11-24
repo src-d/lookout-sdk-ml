@@ -88,9 +88,9 @@ def with_changed_uasts(func):  # noqa: D401
     def wrapped_with_changed_uasts(
             self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
             data_service: DataService, **data) -> [Comment]:
-        stub = data_service.get_data()
-        changes = request_changes(stub, ptr_from, ptr_to, contents=False, uast=True)
-        return func(self, ptr_from, ptr_to, stub, changes=changes, **data)
+        changes = request_changes(
+            data_service.get_data(), ptr_from, ptr_to, contents=False, uast=True)
+        return func(self, ptr_from, ptr_to, data_service, changes=changes, **data)
 
     return wrapped_with_changed_uasts
 
@@ -109,9 +109,9 @@ def with_changed_uasts_and_contents(func):  # noqa: D401
     def wrapped_with_changed_uasts_and_contents(
             self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
             data_service: DataService, **data) -> [Comment]:
-        stub = data_service.get_data()
-        changes = request_changes(stub, ptr_from, ptr_to, contents=True, uast=True)
-        return func(self, ptr_from, ptr_to, stub, changes=changes, **data)
+        changes = request_changes(
+            data_service.get_data(), ptr_from, ptr_to, contents=True, uast=True)
+        return func(self, ptr_from, ptr_to, data_service, changes=changes, **data)
 
     return wrapped_with_changed_uasts_and_contents
 
@@ -129,9 +129,8 @@ def with_uasts(func):  # noqa: D401
     @functools.wraps(func)
     def wrapped_with_uasts(cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
                            data_service: DataService, **data) -> AnalyzerModel:
-        stub = data_service.get_data()
-        files = request_files(stub, ptr, contents=False, uast=True)
-        return func(cls, ptr, config, stub, files=files, **data)
+        files = request_files(data_service.get_data(), ptr, contents=False, uast=True)
+        return func(cls, ptr, config, data_service, files=files, **data)
 
     return wrapped_with_uasts
 
@@ -149,9 +148,8 @@ def with_uasts_and_contents(func):  # noqa: D401
     @functools.wraps(func)
     def wrapped_with_uasts_and_contents(cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
                                         data_service: DataService, **data) -> AnalyzerModel:
-        stub = data_service.get_data()
-        files = request_files(stub, ptr, contents=True, uast=True)
-        return func(cls, ptr, config, stub, files=files, **data)
+        files = request_files(data_service.get_data(), ptr, contents=True, uast=True)
+        return func(cls, ptr, config, data_service, files=files, **data)
 
     return wrapped_with_uasts_and_contents
 

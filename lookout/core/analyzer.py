@@ -62,6 +62,7 @@ class AnalyzerModel(Model):
         self.name = analyzer.name
         self.derive([analyzer.version])
         self.ptr = ptr
+        self.meta["__init__"] = True
         return self
 
     def dump(self) -> str:
