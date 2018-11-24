@@ -17,7 +17,7 @@ _install: &_install
   - pip install --upgrade pip cython codecov
   - pip install -e .[test]
 _before_script: &_before_script
-  - make bblfsh-start
+  - travis_retry make bblfsh-start
 _coverage: &_coverage
   - SCRIPT="coverage run --concurrency=multiprocessing -m unittest discover && travis_retry coverage combine"
 matrix:

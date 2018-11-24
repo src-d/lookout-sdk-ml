@@ -1,7 +1,7 @@
 import functools
 import os
 import threading
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Tuple
 
 import bblfsh
 import grpc
@@ -188,7 +188,7 @@ def request_files(stub: DataStub, ptr: ReferencePointer, contents: bool, uast: b
 
 
 def parse_uast(stub: bblfsh.aliases.ProtocolServiceStub, code: str, filename: str,
-               language: Optional[str] = None) -> bblfsh.Node:
+               language: Optional[str] = None) -> Tuple[bblfsh.Node, list]:
     """
     Return UAST for given file contents and name.
 
@@ -197,8 +197,9 @@ def parse_uast(stub: bblfsh.aliases.ProtocolServiceStub, code: str, filename: st
     :param filename: The name of the file, can be a full path.
     :param language: The name of the language. It is not required to set: Babelfish can \
                      autodetect it.
-    :return: The parsed UAST or None if there was an error.
+    :return: The parsed UAST or undefined object if there was an error; the list of parsing errors.
     """
     request = bblfsh.aliases.ParseRequest(filename=os.path.basename(filename), content=code,
                                           language=language)
-    return stub.Parse(request).uast
+    response = stub.Parse(request)
+    return response.uast, response.errors

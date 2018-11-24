@@ -139,8 +139,9 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
              self.data_service)
 
     def test_babelfish(self):
-        uast = parse_uast(self.data_service.get_bblfsh(), "print('hello')", "hello.py")
+        uast, errors = parse_uast(self.data_service.get_bblfsh(), "console.log('hi');", "hi.js")
         self.assertIsInstance(uast, bblfsh.Node)
+        self.assertEqual(len(errors), 0, str(errors))
 
 
 if __name__ == "__main__":
