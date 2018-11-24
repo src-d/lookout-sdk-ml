@@ -62,6 +62,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
     def test_with_changed_uasts(self):
         def func(imposter, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                  data_service: DataService, **data):
+            self.assertIsInstance(data_service, DataService)
             changes = list(data["changes"])
             self.assertEqual(len(changes), 1)
             change = changes[0]
@@ -83,6 +84,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
     def test_with_changed_uasts_and_contents(self):
         def func(imposter, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                  data_service: DataService, **data):
+            self.assertIsInstance(data_service, DataService)
             changes = list(data["changes"])
             self.assertEqual(len(changes), 1)
             change = changes[0]
@@ -104,6 +106,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
     def test_with_uasts(self):
         def func(imposter, ptr: ReferencePointer, config: dict,
                  data_service: DataService, **data):
+            self.assertIsInstance(data_service, DataService)
             files = list(data["files"])
             self.assertEqual(len(files), 18)
             for file in files:
@@ -122,6 +125,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
     def test_with_uasts_and_contents(self):
         def func(imposter, ptr: ReferencePointer, config: dict,
                  data_service: DataService, **data):
+            self.assertIsInstance(data_service, DataService)
             files = list(data["files"])
             self.assertEqual(len(files), 18)
             for file in files:
