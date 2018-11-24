@@ -4,7 +4,6 @@ from modelforge import Model
 
 from lookout.core.api.event_pb2 import ReferencePointer as ApiReferencePointer
 from lookout.core.api.service_analyzer_pb2 import Comment
-from lookout.core.api.service_data_pb2_grpc import DataStub
 from lookout.core.ports import Type
 
 
@@ -117,7 +116,7 @@ class Analyzer:
         self.config = config
 
     def analyze(self, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
-                data_request_stub: DataStub, **data) -> List[Comment]:
+                data_service: "lookout.core.data_requests.DataService", **data) -> List[Comment]:
         """
         Run the analysis on the specified Git repository state.
 
@@ -127,8 +126,8 @@ class Analyzer:
         :param ptr_from: The Git revision of the fork point. Exists in both the original and \
                          the forked repositories.
         :param ptr_to: The Git revision to analyze. Exists only in the forked repository.
-        :param data_request_stub: The channel to the data service in Lookout server to query for \
-                                  UASTs, file contents, etc.
+        :param data_service: The channel to the data service in Lookout server to query for \
+                             UASTs, file contents, etc.
         :param data: Extra data passed into the method. Used by the decorators to simplify \
                      the data retrieval.
         :return: List of found review suggestions. Refer to \
@@ -138,14 +137,14 @@ class Analyzer:
 
     @classmethod
     def train(cls, ptr: ReferencePointer, config: Mapping[str, Any],
-              data_request_stub: DataStub, **data) -> AnalyzerModel:
+              data_service: "lookout.core.data_requests.DataService", **data) -> AnalyzerModel:
         """
         Generate a new model on top of the specified source code.
 
         :param ptr: Git repository state pointer.
         :param config: Configuration of the training of unspecified structure.
-        :param data_request_stub: The channel to the data service in Lookout server to query for \
-                                  UASTs, file contents, etc.
+        :param data_service: The channel to the data service in Lookout server to query for \
+                             UASTs, file contents, etc.
         :param data: Extra data passed into the method. Used by the decorators to simplify \
                      the data retrieval.
         :return: Instance of `AnalyzerModel` (`model_type`, to be precise).

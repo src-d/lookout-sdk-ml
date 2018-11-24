@@ -72,13 +72,13 @@ class AnalyzerManager(EventHandlers):
                     self._log.info("cache miss: %s", analyzer.name)
                 if model is None:
                     self._log.info("training: %s", analyzer.name)
-                    model = analyzer.train(base_ptr, mycfg, self._data_service.get())
+                    model = analyzer.train(base_ptr, mycfg, self._data_service)
                     self._model_repository.set(self._model_id(analyzer), base_ptr.url, model)
             else:
                 model = DummyAnalyzerModel()
             self._log.debug("running %s", analyzer.name)
             results = analyzer(model, head_ptr.url, mycfg).analyze(
-                base_ptr, head_ptr, self._data_service.get())
+                base_ptr, head_ptr, self._data_service)
             self._log.info("%s: %d comments", analyzer.name, len(results))
             comments.extend(results)
         response.comments.extend(comments)
@@ -97,7 +97,7 @@ class AnalyzerManager(EventHandlers):
                 mycfg = self._protobuf_struct_to_dict(request.configuration[analyzer.name])
             except (KeyError, ValueError):
                 mycfg = {}
-            model = analyzer.train(ptr, mycfg, self._data_service.get())
+            model = analyzer.train(ptr, mycfg, self._data_service)
             self._model_repository.set(self._model_id(analyzer), ptr.url, model)
         response = EventResponse()
         response.analyzer_version = self.version

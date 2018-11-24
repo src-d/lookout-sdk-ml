@@ -1,7 +1,9 @@
 import functools
+import os
 import threading
-from typing import Iterable
+from typing import Iterable, Optional
 
+import bblfsh
 import grpc
 
 from lookout.core.analyzer import Analyzer, AnalyzerModel, ReferencePointer
@@ -33,18 +35,23 @@ class DataService:
         """Summarize the DataService instance as a string."""
         return "DataService(%s)" % self._data_request_address
 
-    def get(self) -> DataStub:
+    def get_data(self) -> DataStub:
         """
         Return a `DataStub` for the current thread.
         """
-        stub = getattr(self._data_request_local, "stub", None)
+        stub = getattr(self._data_request_local, "data_stub", None)
         if stub is None:
-            channel = grpc.insecure_channel(self._data_request_address, options=[
-                ("grpc.max_send_message_length", self.GRPC_MAX_MESSAGE_SIZE),
-                ("grpc.max_receive_message_length", self.GRPC_MAX_MESSAGE_SIZE),
-            ])
-            self._data_request_channels.append(channel)
-            self._data_request_local.stub = stub = DataStub(channel)
+            self._data_request_local.data_stub = stub = DataStub(self._get_channel())
+        return stub
+
+    def get_bblfsh(self) -> bblfsh.aliases.ProtocolServiceStub:
+        """
+        Return a Babelfish `ProtocolServiceStub` for the current thread.
+        """
+        stub = getattr(self._data_request_local, "bblfsh_stub", None)
+        if stub is None:
+            self._data_request_local.bblfsh_stub = stub = \
+                bblfsh.aliases.ProtocolServiceStub(self._get_channel())
         return stub
 
     def shutdown(self):
@@ -53,6 +60,18 @@ class DataService:
         """
         for channel in self._data_request_channels:
             channel.close()
+
+    def _get_channel(self) -> grpc.Channel:
+        channel = getattr(self._data_request_local, "channel", None)
+        if channel is None:
+            self._data_request_local.channel = channel = grpc.insecure_channel(
+                self._data_request_address,
+                options=[
+                    ("grpc.max_send_message_length", self.GRPC_MAX_MESSAGE_SIZE),
+                    ("grpc.max_receive_message_length", self.GRPC_MAX_MESSAGE_SIZE),
+                ])
+            self._data_request_channels.append(channel)
+        return channel
 
 
 def with_changed_uasts(func):  # noqa: D401
@@ -68,9 +87,10 @@ def with_changed_uasts(func):  # noqa: D401
     @functools.wraps(func)
     def wrapped_with_changed_uasts(
             self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
-            data_request_stub: DataStub, **data) -> [Comment]:
-        changes = request_changes(data_request_stub, ptr_from, ptr_to, contents=False, uast=True)
-        return func(self, ptr_from, ptr_to, data_request_stub, changes=changes, **data)
+            data_service: DataService, **data) -> [Comment]:
+        stub = data_service.get_data()
+        changes = request_changes(stub, ptr_from, ptr_to, contents=False, uast=True)
+        return func(self, ptr_from, ptr_to, stub, changes=changes, **data)
 
     return wrapped_with_changed_uasts
 
@@ -88,9 +108,10 @@ def with_changed_uasts_and_contents(func):  # noqa: D401
     @functools.wraps(func)
     def wrapped_with_changed_uasts_and_contents(
             self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
-            data_request_stub: DataStub, **data) -> [Comment]:
-        changes = request_changes(data_request_stub, ptr_from, ptr_to, contents=True, uast=True)
-        return func(self, ptr_from, ptr_to, data_request_stub, changes=changes, **data)
+            data_service: DataService, **data) -> [Comment]:
+        stub = data_service.get_data()
+        changes = request_changes(stub, ptr_from, ptr_to, contents=True, uast=True)
+        return func(self, ptr_from, ptr_to, stub, changes=changes, **data)
 
     return wrapped_with_changed_uasts_and_contents
 
@@ -107,9 +128,10 @@ def with_uasts(func):  # noqa: D401
     """
     @functools.wraps(func)
     def wrapped_with_uasts(cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
-                           data_request_stub: DataStub, **data) -> AnalyzerModel:
-        files = request_files(data_request_stub, ptr, contents=False, uast=True)
-        return func(cls, ptr, config, data_request_stub, files=files, **data)
+                           data_service: DataService, **data) -> AnalyzerModel:
+        stub = data_service.get_data()
+        files = request_files(stub, ptr, contents=False, uast=True)
+        return func(cls, ptr, config, stub, files=files, **data)
 
     return wrapped_with_uasts
 
@@ -126,9 +148,10 @@ def with_uasts_and_contents(func):  # noqa: D401
     """
     @functools.wraps(func)
     def wrapped_with_uasts_and_contents(cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
-                                        data_request_stub: DataStub, **data) -> AnalyzerModel:
-        files = request_files(data_request_stub, ptr, contents=True, uast=True)
-        return func(cls, ptr, config, data_request_stub, files=files, **data)
+                                        data_service: DataService, **data) -> AnalyzerModel:
+        stub = data_service.get_data()
+        files = request_files(stub, ptr, contents=True, uast=True)
+        return func(cls, ptr, config, stub, files=files, **data)
 
     return wrapped_with_uasts_and_contents
 
@@ -162,3 +185,20 @@ def request_files(stub: DataStub, ptr: ReferencePointer, contents: bool, uast: b
     request.want_contents = contents
     request.want_uast = uast
     return stub.GetFiles(request)
+
+
+def parse_uast(stub: bblfsh.aliases.ProtocolServiceStub, code: str, filename: str,
+               language: Optional[str] = None) -> bblfsh.Node:
+    """
+    Return UAST for given file contents and name.
+
+    :param stub: The Babelfish protocol stub.
+    :param code: The contents of the file.
+    :param filename: The name of the file, can be a full path.
+    :param language: The name of the language. It is not required to set: Babelfish can \
+                     autodetect it.
+    :return: The parsed UAST or None if there was an error.
+    """
+    request = bblfsh.aliases.ParseRequest(filename=os.path.basename(filename), content=code,
+                                          language=language)
+    return stub.Parse(request).uast
