@@ -46,7 +46,8 @@ def fetch():
         raise e from None
 
 
-def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".", config_json: str=None) -> None:
+def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".",
+        log_level: str="info", config_json: str=None) -> None:
     """
     Run lookout-sdk executable. If you do not have it please fetch first.
 
@@ -55,6 +56,7 @@ def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".", config_json: st
     :param to: Corresponds to --to flag.
     :param port: Running analyzer port on localhost.
     :param git_dir: Corresponds to --git-dir flag.
+    :param log_level: Corresponds to --log-level flag.
     :param config_json: Corresponds to --config-json flag.
     """
     command = [
@@ -62,6 +64,7 @@ def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".", config_json: st
         "--from", fr,
         "--to", to,
         "--git-dir", git_dir,
+        "--log-level", log_level,
     ]
     if config_json:
         command.extend(("--config-json", config_json))
