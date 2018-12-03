@@ -34,7 +34,8 @@ def fetch():
         buffer.seek(0)
         with tarfile.open(fileobj=buffer, mode="r:gz") as tar:
             with exefile.open("wb") as fout:
-                copyfileobj(tar.extractfile("lookout-sdk_linux_amd64/lookout-sdk"), fout)
+                copyfileobj(tar.extractfile("lookout-sdk_%s_amd64/lookout-sdk" % sys.platform),
+                            fout)
         os.chmod(str(exefile), 0o775)
     except HTTPError as e:
         if e.code == 404:
