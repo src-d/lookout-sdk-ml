@@ -61,7 +61,7 @@ def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".",
     :param config_json: Corresponds to --config-json flag.
     """
     command = [
-        str(exefile), cmd, "-v", "ipv4://localhost:%d" % port,
+        str(exefile), cmd, "ipv4://localhost:%d" % port,
         "--from", fr,
         "--to", to,
         "--git-dir", git_dir,
