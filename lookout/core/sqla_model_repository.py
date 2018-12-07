@@ -67,7 +67,7 @@ class SQLAlchemyModelRepository(ModelRepository):
         self.fs_root = fs_root
         must_initialize = not database_exists(db_endpoint)
         if must_initialize:
-            self._log.debug("%s does not exist, creating")
+            self._log.debug("%s does not exist, creating", db_endpoint)
             create_database(db_endpoint)
             self._log.warning("created a new database at %s", db_endpoint)
         self._engine = create_engine(
