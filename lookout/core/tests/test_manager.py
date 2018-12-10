@@ -23,7 +23,7 @@ class FakeModel(AnalyzerModel):
 
 
 class FakeAnalyzer(Analyzer):
-    version = "1"
+    version = 1
     model_type = FakeModel
     name = "fake.analyzer.FakeAnalyzer"
     instance = None
@@ -48,7 +48,7 @@ class FakeAnalyzer(Analyzer):
 
 
 class FakeDummyAnalyzer(Analyzer):
-    version = "1"
+    version = 1
     model_type = DummyAnalyzerModel
     name = "fake.analyzer.FakeDummyAnalyzer"
     instance = None

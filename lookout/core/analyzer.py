@@ -100,7 +100,7 @@ class Analyzer:
     in analyze() and generated in train().
     """
 
-    version = None  # type: str
+    version = None  # type: int
     model_type = None  # type: Type[AnalyzerModel]
     name = None  # type: str
 
