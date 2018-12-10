@@ -64,7 +64,7 @@ class MyModel(AnalyzerModel):
 
 class MyAnalyzer(Analyzer):
     model_type = MyModel
-    version = "1"
+    version = 1
     name = "my_analyzer.MyAnalyzer"
     description = "Reports the changes in UAST node counts."
     _log = logging.getLogger("MyAnalyzer")
