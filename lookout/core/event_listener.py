@@ -141,8 +141,9 @@ class EventListener(AnalyzerServicer):
             start_time = time.perf_counter()
             context.start_time = start_time
             result = func(self, request, context)
-            delta = time.perf_counter() - start_time
-            self._log.info("OK %.3f", delta)
+            if not getattr(context, "error", False):
+                delta = time.perf_counter() - start_time
+                self._log.info("OK %.3f", delta)
             return result
 
         return wrapped_timeit
@@ -188,6 +189,7 @@ class EventListener(AnalyzerServicer):
                     self._log.exception("FAIL ?")
                 context.set_code(grpc.StatusCode.INTERNAL)
                 context.set_details("%s: %s" % (type(e), e))
+                context.error = True
                 return EventResponse()
 
         return wrapped_catch_them_all

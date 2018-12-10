@@ -1,4 +1,5 @@
 import functools
+import logging
 import os
 import threading
 from typing import Iterable, Optional, Tuple
@@ -20,6 +21,7 @@ class DataService:
     """
 
     GRPC_MAX_MESSAGE_SIZE = 100 * 1024 * 1024
+    _log = logging.getLogger("DataService")
 
     def __init__(self, address: str):
         """
@@ -58,8 +60,24 @@ class DataService:
         """
         Close all the open network connections.
         """
+        self._log.info("Shutting down")
         for channel in self._data_request_channels:
             channel.close()
+        self._data_request_channels.clear()
+        self._data_request_local = threading.local()
+
+    def close_channel(self):
+        """
+        Close the current channel and free all the associated resources.
+        """
+        channel = getattr(self._data_request_local, "channel", None)
+        if channel is not None:
+            self._data_request_channels.remove(channel)
+            self._data_request_local.channel = None
+            self._data_request_local.data_stub = None
+            self._data_request_local.bblfsh_stub = None
+            channel.close()
+            self._log.info("Disposed %s", channel)
 
     def _get_channel(self) -> grpc.Channel:
         channel = getattr(self._data_request_local, "channel", None)
@@ -71,7 +89,21 @@ class DataService:
                     ("grpc.max_receive_message_length", self.GRPC_MAX_MESSAGE_SIZE),
                 ])
             self._data_request_channels.append(channel)
+            self._log.info("Opened %s", channel)
         return channel
+
+
+def _handle_rpc_errors(func):
+    @functools.wraps(func)
+    def wrapped_handle_rpc_errors(cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
+                                  data_service: DataService, **data) -> AnalyzerModel:
+        try:
+            return func(cls, ptr, config, data_service, **data)
+        except grpc.RpcError as e:
+            data_service.close_channel()
+            raise e from None
+
+    return wrapped_handle_rpc_errors
 
 
 def with_changed_uasts(func):  # noqa: D401
@@ -85,6 +117,7 @@ def with_changed_uasts(func):  # noqa: D401
     :return: The decorated method.
     """
     @functools.wraps(func)
+    @_handle_rpc_errors
     def wrapped_with_changed_uasts(
             self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
             data_service: DataService, **data) -> [Comment]:
@@ -106,6 +139,7 @@ def with_changed_uasts_and_contents(func):  # noqa: D401
     :return: The decorated method.
     """
     @functools.wraps(func)
+    @_handle_rpc_errors
     def wrapped_with_changed_uasts_and_contents(
             self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
             data_service: DataService, **data) -> [Comment]:
@@ -127,6 +161,7 @@ def with_uasts(func):  # noqa: D401
     :return: The decorated method.
     """
     @functools.wraps(func)
+    @_handle_rpc_errors
     def wrapped_with_uasts(cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
                            data_service: DataService, **data) -> AnalyzerModel:
         files = request_files(data_service.get_data(), ptr, contents=False, uast=True)
@@ -146,6 +181,7 @@ def with_uasts_and_contents(func):  # noqa: D401
     :return: The decorated method.
     """
     @functools.wraps(func)
+    @_handle_rpc_errors
     def wrapped_with_uasts_and_contents(cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
                                         data_service: DataService, **data) -> AnalyzerModel:
         files = request_files(data_service.get_data(), ptr, contents=True, uast=True)
