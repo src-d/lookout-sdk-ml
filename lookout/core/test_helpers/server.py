@@ -48,7 +48,7 @@ def fetch():
 
 
 def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".",
-        log_level: str="info", config_json: str=None) -> None:
+        log_level: str="info", config_json: str=None) -> subprocess.CompletedProcess:
     """
     Run lookout-sdk executable. If you do not have it please fetch first.
 
@@ -59,6 +59,7 @@ def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".",
     :param git_dir: Corresponds to --git-dir flag.
     :param log_level: Corresponds to --log-level flag.
     :param config_json: Corresponds to --config-json flag.
+    :return: CompletedProcess with return code.
     """
     command = [
         str(exefile), cmd, "ipv4://localhost:%d" % port,
@@ -69,9 +70,7 @@ def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".",
     ]
     if config_json:
         command.extend(("--config-json", config_json))
-    subprocess.run(
-        command,
-        stdout=sys.stdout, stderr=sys.stderr, check=True)
+    return subprocess.run(command, stdout=sys.stdout, stderr=sys.stderr, check=True)
 
 
 def find_port(attempts: int = 100) -> int:
