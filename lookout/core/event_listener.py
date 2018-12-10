@@ -180,13 +180,15 @@ class EventListener(AnalyzerServicer):
             try:
                 return func(self, request, context)
             except Exception as e:
-                start_time = getattr(request, "start_time", None)
+                start_time = getattr(context, "start_time", None)
                 if start_time is not None:
                     delta = time.perf_counter() - start_time
                     self._log.exception("FAIL %.3f", delta)
                 else:
                     self._log.exception("FAIL ?")
-                context.abort(grpc.StatusCode.INTERNAL, "%s: %s" % (type(e), e))
+                context.set_code(grpc.StatusCode.INTERNAL)
+                context.set_details("%s: %s" % (type(e), e))
+                return EventResponse()
 
         return wrapped_catch_them_all
 
