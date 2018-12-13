@@ -139,4 +139,8 @@ class AnalyzerManager(EventHandlers):
                 elif isinstance(d[key], ProtobufList):
                     d[key] = list(d[key])
                     stack.append(d[key])
+                else:
+                    if isinstance(d[key], float) and d[key].is_integer():
+                        d[key] = int(d[key])
+
         return mycfg
