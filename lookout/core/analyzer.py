@@ -73,6 +73,12 @@ class AnalyzerModel(Model):
         """
         return "%s/%s %s %s" % (self.name, self.version, self.ptr.url, self.ptr.commit)
 
+    def _load_tree(self, tree: dict):
+        self.ptr = ReferencePointer(*tree["ptr"])
+
+    def _generate_tree(self) -> dict:
+        return {"ptr": list(self.ptr)}
+
 
 class DummyAnalyzerModel(AnalyzerModel):
     """
@@ -81,12 +87,6 @@ class DummyAnalyzerModel(AnalyzerModel):
 
     NAME = "dummy"
     VENDOR = "public domain"
-
-    def _generate_tree(self) -> dict:
-        return {}
-
-    def _load_tree(self, tree: dict) -> None:
-        pass
 
 
 class Analyzer:
