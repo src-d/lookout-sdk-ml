@@ -13,6 +13,7 @@ from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import EventResponse
 from lookout.core.api.service_analyzer_pb2_grpc import (add_AnalyzerServicer_to_server,
                                                         AnalyzerServicer)
+from lookout.core.metrics import submit_event
 
 
 def extract_review_event_context(request: ReviewEvent) -> Dict[str, Any]:
@@ -143,6 +144,7 @@ class EventListener(AnalyzerServicer):
             result = func(self, request, context)
             if not getattr(context, "error", False):
                 delta = time.perf_counter() - start_time
+                submit_event("request." + type(request).__name__, delta)
                 self._log.info("OK %.3f", delta)
             return result
 
@@ -190,6 +192,7 @@ class EventListener(AnalyzerServicer):
                 context.set_code(grpc.StatusCode.INTERNAL)
                 context.set_details("%s: %s" % (type(e), e))
                 context.error = True
+                submit_event("error", 1)
                 return EventResponse()
 
         return wrapped_catch_them_all
