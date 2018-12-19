@@ -22,6 +22,7 @@ class AnalyzerTests(unittest.TestCase):
         buffer.seek(0)
         model2 = model.load(buffer)
         self.assertEqual(model.ptr, model2.ptr)
+        self.assertEqual(model.name, model2.name)
 
 
 if __name__ == "__main__":

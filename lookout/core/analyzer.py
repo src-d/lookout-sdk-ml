@@ -75,9 +75,10 @@ class AnalyzerModel(Model):
 
     def _load_tree(self, tree: dict):
         self.ptr = ReferencePointer(*tree["ptr"])
+        self.name = tree["name"]
 
     def _generate_tree(self) -> dict:
-        return {"ptr": list(self.ptr)}
+        return {"ptr": list(self.ptr), "name": self.name}
 
 
 class DummyAnalyzerModel(AnalyzerModel):
