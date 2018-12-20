@@ -58,6 +58,7 @@ matrix:
         - pip install --upgrade pip
         - pip install twine
       script:
+        - test $(python3 setup.py --version) == $TRAVIS_TAG
         - python3 setup.py bdist_wheel
       deploy:
         provider: script

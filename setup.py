@@ -16,7 +16,7 @@ setup(
                 "Machine Learning.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    version=".".join(map(str, lookout_core.__version__)),
+    version=lookout_core.__version__,
     license="Apache-2.0",
     author="source{d}",
     author_email="machine-learning@sourced.tech",
