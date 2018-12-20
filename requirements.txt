@@ -9,3 +9,4 @@ psycopg2-binary==2.7.5
 modelforge==0.9.3
 bblfsh==2.12.6
 lookout-sdk==0.2.0
+tqdm==4.28.1

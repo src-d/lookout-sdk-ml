@@ -1,6 +1,6 @@
 import unittest
 
-from bblfsh import Node, Position
+from bblfsh import BblfshClient, Node, Position
 
 from lookout.core.api.service_data_pb2 import File
 from lookout.core.lib import (
@@ -81,6 +81,7 @@ class LibTests(unittest.TestCase):
         return result
 
     def test_filter_files(self):
+
         files = {"one.py": File(content=b"hello"), "two.py": File(content=b"world" * 100)}
         logged = False
 
@@ -89,10 +90,15 @@ class LibTests(unittest.TestCase):
                 nonlocal logged
                 logged = True
 
-        filtered = filter_files(files, 80, Log())
-        self.assertEqual(len(filtered), 1)
-        self.assertEqual(filtered[0].content, b"hello")
-        self.assertTrue(logged)
+        try:
+            bblfsh_client = BblfshClient("0.0.0.0:9432")
+            filtered = filter_files(filenames=files, line_length_limit=80, client=bblfsh_client,
+                                    language="python", log=Log())
+            self.assertEqual(len(filtered), 1)
+            self.assertEqual(filtered[0].content, b"hello")
+            self.assertTrue(logged)
+        finally:
+            bblfsh_client._channel.close()
 
     def test_extract_changed_nodes(self):
         root = Node(
