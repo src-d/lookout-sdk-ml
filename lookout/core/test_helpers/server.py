@@ -47,8 +47,9 @@ def fetch():
         raise e from None
 
 
-def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".",
-        log_level: str="info", config_json: str=None) -> subprocess.CompletedProcess:
+def run(cmd: str, fr: str, to: str, port: int, *, git_dir: str=".",
+        bblfsh: str=None, log_level: str="info", config_json: str=None
+        ) -> subprocess.CompletedProcess:
     """
     Run lookout-sdk executable. If you do not have it please fetch first.
 
@@ -58,6 +59,7 @@ def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".",
     :param port: Running analyzer port on localhost.
     :param git_dir: Corresponds to --git-dir flag.
     :param log_level: Corresponds to --log-level flag.
+    :param bblfsh: Corresponds to --bblfshd flag.
     :param config_json: Corresponds to --config-json flag.
     :return: CompletedProcess with return code.
     """
@@ -68,6 +70,8 @@ def run(cmd: str, fr: str, to: str, port: int, git_dir: str=".",
         "--git-dir", git_dir,
         "--log-level", log_level,
     ]
+    if bblfsh:
+        command.extend(("--bblfshd", "ipv4://" + bblfsh))
     if config_json:
         command.extend(("--config-json", config_json))
     return subprocess.run(command, stdout=sys.stdout, stderr=sys.stderr, check=True)
