@@ -2,11 +2,16 @@
 from collections import defaultdict
 from difflib import SequenceMatcher
 import logging
-from typing import Dict, Iterable, List, Sequence
+from os.path import isfile
+import re
+from typing import Dict, Iterable, List, Optional, Sequence
 
-from bblfsh import Node
+from bblfsh import BblfshClient, Node
+from bblfsh.client import NonUTF8ContentException
+from tqdm import tqdm
 
 from lookout.core.api.service_data_pb2 import File
+from lookout.core.garbage_exclusion import GARBAGE_PATTERN
 
 
 def find_new_lines(before: File, after: File) -> List[int]:
@@ -86,21 +91,57 @@ def files_by_language(files: Iterable[File]) -> Dict[str, Dict[str, File]]:
     return result
 
 
-def filter_files(files: Dict[str, File], line_length_limit: int,
-                 log: logging.Logger = None) -> List[File]:
+def filter_filepaths(filepaths: Iterable[str], exclude_pattern: Optional[str] = None,
+                     ) -> Iterable[str]:
     """
-    Filter files based on their maximum line length.
+    Mirror of the file filtering used in the format analyzer for use by debugging tools.
 
-    :param files: files to filter.
+    :param filepaths: Iterable of filepaths to filter.
+    :param exclude_pattern: Pattern to reject files based on their path. If None, uses the pattern
+                            currently in use in lookout.core. Use "" to not filter anything.
+    :return Iterable of paths, filtered.
+    """
+    if exclude_pattern is None:
+        exclude_pattern = GARBAGE_PATTERN
+    exclude_compiled_pattern = re.compile(exclude_pattern) if exclude_pattern else None
+    for filepath in filepaths:
+        if not isfile(filepath):
+            continue
+        if exclude_compiled_pattern and exclude_compiled_pattern.search(filepath):
+            continue
+        yield filepath
+
+
+def filter_files(filenames: Iterable[str], line_length_limit: int, client: BblfshClient,
+                 language: str, log: logging.Logger = None) -> Iterable[File]:
+    """
+    Filter files based on `language` and their maximum line length.
+
+    :param filenames: paths to the files to filter.
     :param line_length_limit: maximum line length to accept a file.
+    :param client: Babelfish client. Babelfish server should be started accordingly.
+    :param language: Language to consider. Will discard the other languages.
     :param log: logger to use to report the number of excluded files.
     :return: files passed through the filter and the number of files which were excluded.
     """
     passed = []
-    for file in files.values():
-        if len(max(file.content.splitlines(), key=len, default=b"")) <= line_length_limit:
-            passed.append(file)
+    n_parsed = 0
+    for filename in tqdm(filter_filepaths(filenames)):
+        try:
+            res = client.parse(filename)
+        except NonUTF8ContentException:
+            # skip files that can't be parsed because of UTF-8 decoding errors.
+            continue
+        if res.status == 0 and res.language.lower() == language.lower():
+            uast = res.uast
+            path = filename
+            n_parsed += 1
+            with open(filename) as f:
+                content = f.read().encode("utf-8")
+            if len(max(content.splitlines(), key=len, default=b"")) <= line_length_limit:
+                passed.append(File(content=content, uast=uast, path=path,
+                                   language=res.language.lower()))
     if log is not None:
-        log.debug("excluded %d/%d files by max line length %d",
-                  len(files) - len(passed), len(files), line_length_limit)
+        log.debug("excluded %d/%d %s files by max line length %d",
+                  n_parsed - len(passed), n_parsed, language, line_length_limit)
     return passed
