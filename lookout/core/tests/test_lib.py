@@ -1,3 +1,4 @@
+from tempfile import NamedTemporaryFile
 import unittest
 
 from bblfsh import BblfshClient, Node, Position
@@ -82,23 +83,27 @@ class LibTests(unittest.TestCase):
 
     def test_filter_files(self):
 
-        files = {"one.py": File(content=b"hello"), "two.py": File(content=b"world" * 100)}
-        logged = False
-
         class Log:
             def debug(self, *args, **kwargs):
                 nonlocal logged
                 logged = True
 
-        try:
-            bblfsh_client = BblfshClient("0.0.0.0:9432")
-            filtered = filter_files(filenames=files, line_length_limit=80, client=bblfsh_client,
-                                    language="python", log=Log())
-            self.assertEqual(len(filtered), 1)
-            self.assertEqual(filtered[0].content, b"hello")
-            self.assertTrue(logged)
-        finally:
-            bblfsh_client._channel.close()
+        logged = False
+        with NamedTemporaryFile(prefix="one", suffix=".js") as tmp1:
+            tmp1.write(b"hello")
+            tmp1.seek(0)
+            with NamedTemporaryFile(prefix="two", suffix=".js") as tmp2:
+                tmp2.write(b"world" * 100)
+                tmp2.seek(0)
+            try:
+                bblfsh_client = BblfshClient("0.0.0.0:9432")
+                filtered = filter_files(filenames=[tmp1.name, tmp2.name], line_length_limit=80,
+                                        client=bblfsh_client, language="javascript", log=Log())
+                self.assertEqual(len(filtered), 1)
+                self.assertEqual(filtered[0].content, b"hello")
+                self.assertTrue(logged)
+            finally:
+                bblfsh_client._channel.close()
 
     def test_extract_changed_nodes(self):
         root = Node(

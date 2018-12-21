@@ -136,8 +136,8 @@ def filter_files(filenames: Iterable[str], line_length_limit: int, client: Bblfs
             uast = res.uast
             path = filename
             n_parsed += 1
-            with open(filename) as f:
-                content = f.read().encode("utf-8")
+            with open(filename, "rb") as f:
+                content = f.read()
             if len(max(content.splitlines(), key=len, default=b"")) <= line_length_limit:
                 passed.append(File(content=content, uast=uast, path=path,
                                    language=res.language.lower()))
