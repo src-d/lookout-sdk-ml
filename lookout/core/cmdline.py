@@ -2,6 +2,7 @@ import argparse
 import importlib
 import json
 import logging
+import os
 import pkgutil
 import sys  # noqa: F401
 from unittest.mock import patch
@@ -14,6 +15,7 @@ from lookout.core import slogging
 from lookout.core.data_requests import DataService
 from lookout.core.event_listener import EventListener
 from lookout.core.manager import AnalyzerManager
+from lookout.core.package import package_cmdline_entry
 from lookout.core.sqla_model_repository import SQLAlchemyModelRepository
 
 
@@ -29,7 +31,7 @@ class ArgumentDefaultsHelpFormatterNoNone(argparse.ArgumentDefaultsHelpFormatter
         return super()._get_help_string(action)
 
 
-def list_analyzers(args):
+def list_analyzers(args: argparse.Namespace):
     """
     Print the list of the analyzers inside the `lookout` package.
 
@@ -50,17 +52,20 @@ def list_analyzers(args):
                          for c in pkgutil.iter_modules(m.__path__))
             continue
 
+        try:
+            cls = m.analyzer_class
+        except AttributeError:
+            continue
         if first:
             first = False
         else:
             print()
         print(prefix + name)
-        cls = m.analyzer_class
-        print("\t" + cls.version)
+        print("\t%s" % cls.version)
         print("\t" + cls.description)
 
 
-def run_analyzers(args):
+def run_analyzers(args: argparse.Namespace):
     """
     Launch the service with the specified analyzers. Blocks until a KeyboardInterrupt.
 
@@ -77,11 +82,13 @@ def run_analyzers(args):
         data_request_address = args.request_server
     data_service = DataService(data_request_address)
     log.info("Created %s", data_service)
+    sys.path.append(os.getcwd())
     manager = AnalyzerManager(
         analyzers=[importlib.import_module(a).analyzer_class for a in args.analyzer],
         model_repository=model_repository,
         data_service=data_service,
     )
+    sys.path = sys.path[:-1]
     log.info("Created %s", manager)
     listener = EventListener(address=args.server, handlers=manager, n_workers=args.workers)
     log.info("Created %s", listener)
@@ -92,7 +99,7 @@ def run_analyzers(args):
     data_service.shutdown()
 
 
-def init_repo(args):
+def init_repo(args: argparse.Namespace):
     """
     Initialize the model repository.
 
@@ -104,7 +111,7 @@ def init_repo(args):
     repo.init()
 
 
-def run_analyzer_tool(args) -> None:
+def run_analyzer_tool(args: argparse.Namespace) -> None:
     """
     Invoke the tooling of an analyzer.
 
@@ -115,7 +122,8 @@ def run_analyzer_tool(args) -> None:
         importlib.import_module(args.analyzer).run_cmdline_tool()
 
 
-def create_model_repo_from_args(args) -> SQLAlchemyModelRepository:  # noqa: D401
+def create_model_repo_from_args(args: argparse.Namespace
+                                ) -> SQLAlchemyModelRepository:  # noqa: D401
     """
     Factory function to get SQLAlchemyModelRepository.
 
@@ -158,6 +166,17 @@ def add_logging_args(parser):
                help="Path to the file which sets individual log levels of domains.")
 
 
+def add_analyzer_arg(parser):
+    """
+    Add the variable count argument to specify analyzers.
+
+    :param parser: `argparse` parser where to add new flags.
+    """
+    parser.add("analyzer", nargs="+",
+               help="Fully qualified package name with an analyzer. Current directory is "
+                    "included into PYTHONPATH.")
+
+
 def create_parser() -> configargparse.ArgParser:
     """
     Initialize the command line argument parser.
@@ -179,11 +198,11 @@ def create_parser() -> configargparse.ArgParser:
         "run", "Launch a new service with the specified (one or more) analyzers.")
     run_parser.set_defaults(handler=run_analyzers)
     add_logging_args(run_parser)
+    add_analyzer_arg(run_parser)
     run_parser.add("--log-structured", action="store_true",
                    help="Enable structured logging (compatible with k8s).")
     run_parser.add("-c", "--config", is_config_file=True,
                    help="Path to the configuration file with option defaults.")
-    run_parser.add("analyzer", nargs="+", help="Fully qualified package name with an analyzer.")
     run_parser.add("-s", "--server", required=True,
                    help="Lookout server address, e.g. localhost:1234.")
     run_parser.add("-w", "--workers", type=int, default=1,
@@ -201,4 +220,27 @@ def create_parser() -> configargparse.ArgParser:
     tool_parser.set_defaults(handler=run_analyzer_tool)
     tool_parser.add("analyzer", help="Fully qualified package name with an analyzer.")
     tool_parser.add("args", nargs=argparse.REMAINDER)
+
+    package_parser = add_parser(
+        "package",
+        "Package several analyzers to a Docker container and write a sample Docker Compose config "
+        "for Lookout.")
+    package_parser.set_defaults(handler=package_cmdline_entry)
+    add_logging_args(package_parser)
+    add_analyzer_arg(package_parser)
+    package_parser.add("-w", "--workdir", help="Generate files in this directory.",
+                       required=True)
+    package_parser.add("--requirements", help="Path to a custom requirements.txt")
+    package_parser.add("-r", "--repo", help="GitHub repository name to watch. "
+                                            "Example: \"src-d/lookout\".",
+                       required=True)
+    package_parser.add("-u", "--user", help="GitHub user name which will send review comments.",
+                       required=True)
+    paturl = "https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/"  # noqa
+    package_parser.add("-t", "--token", help="GitHub token for -u/--user. See " + paturl,
+                       required=True)
+    package_parser.add("-y", "--yes", help="Run the commands in the end.",
+                       action="store_true")
+    package_parser.add("-n", "--no", help="Do not run the commands in the end.",
+                       action="store_true")
     return parser
