@@ -24,9 +24,9 @@ class MyModel(AnalyzerModel):  # noqa: D
 class MyAnalyzer(Analyzer):  # noqa: D
     model_type = MyModel
     version = 1
-    name = "my_analyzer.MyAnalyzer"
-    description = "Reports the changes in UAST node counts."
-    _log = logging.getLogger("MyAnalyzer")
+    name = "examples.MyAnalyzer"
+    description = "Tries to fix misspelled identifiers."
+    _log = logging.getLogger("ExamplesAnalyzer")
 
     @with_changed_uasts_and_contents
     def analyze(self, ptr_from: ReferencePointer, ptr_to: ReferencePointer,  # noqa: D
