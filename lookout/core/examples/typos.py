@@ -2,7 +2,7 @@ from collections import defaultdict
 import logging
 from typing import Any, Dict, Iterable
 
-from autocorrect import spell
+import autocorrect
 import bblfsh
 from sourced.ml.algorithms import TokenParser, UastIds2Bag
 
@@ -43,24 +43,31 @@ class TyposAnalyzer(Analyzer):  # noqa: D
         self._log.info("analyze %s %s", ptr_from.commit, ptr_to.commit)
         comments = []
         parser = TokenParser(stem_threshold=100, single_shot=True)
-        for change in changes:
-            suggestions = defaultdict(list)
-            new_lines = set(find_new_lines(change.base, change.head))
-            for node in bblfsh.filter(change.head.uast, "//*[@roleIdentifier]"):
-                if node.start_position is not None and node.start_position.line in new_lines:
-                    for part in parser.split(node.token):
-                        if part not in self.model.names:
-                            fixed = spell(part)
-                            if fixed != part:
-                                suggestions[node.start_position.line].append(
-                                    (node.token, part, fixed))
-            for line, s in suggestions.items():
-                comment = Comment()
-                comment.file = change.head.path
-                comment.text = "\n".join("`%s`: %s > %s" % fix for fix in s)
-                comment.line = line
-                comment.confidence = 100
-                comments.append(comment)
+        words = autocorrect.word.KNOWN_WORDS.copy()
+        try:
+            for name in self.model.names:
+                if len(name) >= 3:
+                    autocorrect.word.KNOWN_WORDS.add(name)
+            for change in changes:
+                suggestions = defaultdict(list)
+                new_lines = set(find_new_lines(change.base, change.head))
+                for node in bblfsh.filter(change.head.uast, "//*[@roleIdentifier]"):
+                    if node.start_position is not None and node.start_position.line in new_lines:
+                        for part in parser.split(node.token):
+                            if part not in self.model.names:
+                                fixed = autocorrect.spell(part)
+                                if fixed != part:
+                                    suggestions[node.start_position.line].append(
+                                        (node.token, part, fixed))
+                for line, s in suggestions.items():
+                    comment = Comment()
+                    comment.file = change.head.path
+                    comment.text = "\n".join("`%s`: %s > %s" % fix for fix in s)
+                    comment.line = line
+                    comment.confidence = 100
+                    comments.append(comment)
+        finally:
+            autocorrect.word.KNOWN_WORDS = words
         return comments
 
     @classmethod
