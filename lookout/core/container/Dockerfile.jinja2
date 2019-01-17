@@ -7,7 +7,7 @@ COPY requirements.txt .
 
 RUN apt-get update && \
     apt-get install -y --no-install-suggests --no-install-recommends \
-      python3-dev gcc g++ {{ pkg }} {{ pkg_dev }} && \
+      postgresql-client python3-dev gcc g++ {{ pkg }} {{ pkg_dev }} && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apt-get remove -y python3-dev gcc g++ {{ pkg_dev }} && \
     apt-get autoremove -y && \

@@ -55,12 +55,12 @@ def package(script_yes: bool, script_no: bool, wd: str, analyzers: Iterable[str]
     package_name = _process_analyzers(analyzers, wd, log)
     packages = _process_requirements(requirements_path, os.path.join(wd, "requirements.txt"), log)
     ndeps, ndeps_dev = _compose_native_deps(packages)
-    _generate_configs(" ".join(analyzers), ndeps, ndeps_dev, package_name, wd, repo, user, token,
-                      log)
+    _generate_configs(
+        " ".join(analyzers), ndeps, ndeps_dev, package_name, wd, repo, user, token, log)
     script = "cd %s\ndocker build -t %s .\ndocker-compose up --force-recreate" % (wd, package_name)
     log.info("These are your next steps:\n\n%s\n", script)
     if script_yes or (not script_no and not prompt.yn("Run these commands now?", default="n")):
-        os.execlp("sh",  "-e", "-x", "-c", script)
+        os.execlp("sh",  "-x", "-c", script.replace("\n", " && "))
 
 
 # The set of Python packages which are already installed in srcd/lookout-sdk-ml Docker image.
@@ -141,12 +141,16 @@ def _generate_configs(analyzers: str, ndeps: str, ndeps_dev: str, package_name: 
     jenv = jinja2.Environment(trim_blocks=True, lstrip_blocks=True, keep_trailing_newline=True)
     cpath = os.path.join(os.path.dirname(__file__), "container")
     loader = jinja2.FileSystemLoader((cpath,), followlinks=True)
+
+    def copy(filename):
+        shutil.copy(os.path.join(cpath, filename), os.path.join(wd, filename))
+
     log.info("Generating Dockerfile")
     template = loader.load(jenv, "Dockerfile.jinja2")
     with open(os.path.join(wd, "Dockerfile"), "w") as fout:
         fout.write(template.render(analyzers=analyzers, package_name=package_name,
                                    pkg=ndeps, pkg_dev=ndeps_dev))
-    shutil.copy(os.path.join(cpath, "analyzers.yml"), os.path.join(wd, "analyzers.yml"))
+    copy("analyzers.yml")
     log.info("Generating lookout.yml")
     template = loader.load(jenv, "lookout.yml.jinja2")
     with open(os.path.join(wd, "lookout.yml"), "w") as fout:
@@ -154,6 +158,8 @@ def _generate_configs(analyzers: str, ndeps: str, ndeps_dev: str, package_name: 
             analyzers=analyzers, package_name=package_name, repo=repo,
             github_user=user, github_token=token))
     log.info("Generating docker-compose.yml")
+    copy("wait-for-port.sh")
+    copy("wait-for-postgres.sh")
     template = loader.load(jenv, "docker-compose.yml.jinja2")
     with open(os.path.join(wd, "docker-compose.yml"), "w") as fout:
         fout.write(template.render(
