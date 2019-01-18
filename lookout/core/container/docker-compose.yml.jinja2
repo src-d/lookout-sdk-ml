@@ -12,7 +12,6 @@ services:
     ports:
       - "10301:10301"
     entrypoint: ["/bin/sh"]
-    # sleep because container with db is up but the db itself doesn't accept connections yet
     command: ["-c", "wait-for-port 0.0.0.0 9930 && lookoutd migrate && lookoutd serve"]
     volumes:
       - ./lookout.yml:/config.yml
@@ -26,7 +25,6 @@ services:
       - /tmp/models:/models
       - ./wait-for-postgres.sh:/usr/local/bin/wait-for-postgres
     entrypoint: ["/bin/sh"]
-    # sleep because container with db is up but the db itself doesn't accept connections yet
     command: ["-c", "wait-for-postgres 0.0.0.0 5432 postgres postgres && analyzer run {{ analyzers }} -c analyzers.yml"]
   bblfsh:
     image: "bblfsh/bblfshd:v2.9.0-drivers"
