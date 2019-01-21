@@ -89,10 +89,14 @@ class LibTests(unittest.TestCase):
                 nonlocal logged
                 logged = True
 
-        filtered = filter_files(files, 80, Log())
+        filtered = filter_files(files, 80, 1000000, log=Log())
         self.assertEqual(len(filtered), 1)
         self.assertEqual(filtered[0].content, b"hello")
         self.assertTrue(logged)
+        filtered = filter_files(files, 80, 1, log=Log())
+        self.assertEqual(len(filtered), 0)
+        filtered = filter_files(files, 80, 5 * 100, log=Log())
+        self.assertEqual(len(filtered), 1)
 
     def test_extract_changed_nodes(self):
         root = Node(
