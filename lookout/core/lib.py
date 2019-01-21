@@ -2,7 +2,8 @@
 from collections import defaultdict
 from difflib import SequenceMatcher
 import logging
-from typing import Dict, Iterable, List, Sequence
+import random
+from typing import Dict, Iterable, List, Optional, Sequence
 
 from bblfsh import Node
 
@@ -86,21 +87,38 @@ def files_by_language(files: Iterable[File]) -> Dict[str, Dict[str, File]]:
     return result
 
 
-def filter_files(files: Dict[str, File], line_length_limit: int,
-                 log: logging.Logger = None) -> List[File]:
+def filter_files(files: Dict[str, File], line_length_limit: int, overall_size_limit: int,
+                 random_state: int = 7, log: Optional[logging.Logger] = None) -> List[File]:
     """
     Filter files based on their maximum line length.
 
     :param files: files to filter.
     :param line_length_limit: maximum line length to accept a file.
+    :param overall_size_limit: maximum cumulative files size in bytes. \
+                               The files are discarded after reaching this limit.
+    :param random_state: random generator state for shuffling the files.
     :param log: logger to use to report the number of excluded files.
     :return: files passed through the filter and the number of files which were excluded.
     """
-    passed = []
-    for file in files.values():
+    line_passed = []
+    for key, file in files.items():
         if len(max(file.content.splitlines(), key=len, default=b"")) <= line_length_limit:
-            passed.append(file)
+            line_passed.append(key)
     if log is not None:
         log.debug("excluded %d/%d files by max line length %d",
-                  len(files) - len(passed), len(files), line_length_limit)
-    return passed
+                  len(files) - len(line_passed), len(files), line_length_limit)
+    line_passed.sort()
+    random.seed(random_state)
+    line_passed = random.sample(line_passed, k=len(line_passed))
+    size = 0
+    size_passed = []
+    for key in line_passed:
+        file = files[key]
+        size += len(file.content)
+        if size > overall_size_limit:
+            break
+        size_passed.append(file)
+    if log is not None:
+        log.debug("excluded %d/%d files by max overall size %d",
+                  len(line_passed) - len(size_passed), len(line_passed), overall_size_limit)
+    return size_passed
