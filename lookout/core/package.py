@@ -84,6 +84,8 @@ BUILT_IN_PKGS = {
 # installed temporarily for `pip install`.
 NATIVE_DEPS = {
     "sourced-ml": (("libsnappy1v5",), ("libsnappy-dev",)),
+    "Pillow-SIMD": (("zlib1g", "libjpeg-turbo8", "libpng16-16"),
+                    ("zlib1g-dev", "libjpeg-turbo8-dev", "libpng-dev")),
 }
 
 
