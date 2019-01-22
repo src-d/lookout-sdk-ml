@@ -52,6 +52,7 @@ def package(script_yes: bool, script_no: bool, wd: str, analyzers: Iterable[str]
         log.critical("Not empty: %s", wd)
         return 2
     log.info("Preparing %s", wd)
+    os.makedirs(wd, exist_ok=True)
     package_name = _process_analyzers(analyzers, wd, log)
     packages = _process_requirements(requirements_path, os.path.join(wd, "requirements.txt"), log)
     ndeps, ndeps_dev = _compose_native_deps(packages)
