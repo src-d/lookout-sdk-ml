@@ -56,7 +56,7 @@ matrix:
       python: 3.5
       install:
         - pip install --upgrade pip
-        - pip install twine
+        - pip install twine pyopenssl
       script:
         - test $(python3 setup.py --version) == $TRAVIS_TAG
         - python3 setup.py bdist_wheel
