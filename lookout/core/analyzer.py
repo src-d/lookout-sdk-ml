@@ -1,3 +1,4 @@
+import logging
 from typing import Any, List, Mapping, NamedTuple
 
 from modelforge import Model
@@ -46,7 +47,7 @@ class AnalyzerModel(Model):
         `ptr` - state of the Git repository on which the model was trained.
         :param kwargs: passed to the upstream's `__init__`.
         """
-        super().__init__(**kwargs)
+        super().__init__(log_level=kwargs.get("log_level", logging.INFO))
         self.name = "<unknown name>"
         self.ptr = ReferencePointer("<unknown url>", "<unknown reference>", "<unknown commit>")
 
