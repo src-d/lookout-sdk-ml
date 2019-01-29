@@ -86,6 +86,7 @@ NATIVE_DEPS = {
     "sourced-ml": (("libsnappy1v5",), ("libsnappy-dev",)),
     "Pillow-SIMD": (("zlib1g", "libjpeg-turbo8", "libpng16-16"),
                     ("zlib1g-dev", "libjpeg-turbo8-dev", "libpng-dev")),
+    "python-igraph": (("libxml2", "zlib1g"), ("make", "libxml2-dev", "zlib1g-dev")),
 }
 
 
@@ -130,13 +131,13 @@ def _process_requirements(src_path: str, dest_path: str, log: logging.Logger) ->
 
 
 def _compose_native_deps(packages: Iterable[str]) -> Tuple[str, str]:
-    pkgs = []
-    pkgs_dev = []
+    pkgs = set()
+    pkgs_dev = set()
     for pkg in packages:
         deps, deps_dev = NATIVE_DEPS.get(pkg, ((), ()))
-        pkgs.extend(deps)
-        pkgs_dev.extend(deps_dev)
-    return " ".join(pkgs), " ".join(pkgs_dev)
+        pkgs.update(deps)
+        pkgs_dev.update(deps_dev)
+    return " ".join(sorted(pkgs)), " ".join(sorted(pkgs_dev))
 
 
 def _generate_configs(analyzers: str, ndeps: str, ndeps_dev: str, package_name: str, wd: str,
