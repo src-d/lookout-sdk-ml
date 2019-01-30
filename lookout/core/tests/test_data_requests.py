@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import threading
 import unittest
@@ -53,7 +54,8 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
 
     def run_data_service(self):
         try:
-            server.run("push", self.COMMIT_FROM, self.COMMIT_TO, self.port)
+            server.run("push", self.COMMIT_FROM, self.COMMIT_TO, self.port,
+                       git_dir=os.getenv("LOOKOUT_SDK_ML_TESTS_GIT_DIR", "."))
         except Exception as e:
             print(type(e).__name__, e)
             self.setUpWasSuccessful = False
