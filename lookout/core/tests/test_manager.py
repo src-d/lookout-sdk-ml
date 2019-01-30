@@ -1,9 +1,11 @@
+import logging
 from typing import Tuple
 import unittest
 
 import bblfsh
 from google.protobuf.struct_pb2 import Struct as ProtobufStruct
 
+from lookout.core import slogging
 from lookout.core.analyzer import Analyzer, AnalyzerModel, DummyAnalyzerModel, ReferencePointer
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import Comment, EventResponse
@@ -28,6 +30,7 @@ class FakeAnalyzer(Analyzer):
     name = "fake.analyzer.FakeAnalyzer"
     instance = None
     service = None
+    skip_train = False
 
     def __init__(self, model: AnalyzerModel, url: str, config: dict):
         super().__init__(model, url, config)
@@ -45,6 +48,12 @@ class FakeAnalyzer(Analyzer):
               ) -> AnalyzerModel:
         cls.service = data_service
         return FakeModel()
+
+    @classmethod
+    def check_training_required(
+            cls, old_model: AnalyzerModel, ptr: ReferencePointer, config: dict,
+            data_service: DataService, **data) -> bool:
+        return not cls.skip_train
 
 
 class FakeDummyAnalyzer(Analyzer):
@@ -104,6 +113,10 @@ class FakeModelRepository(ModelRepository):
 
 
 class AnalyzerManagerTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        slogging.setup(logging.DEBUG, False)
+
     def setUp(self):
         self.data_service = FakeDataService()
         self.model_repository = FakeModelRepository()
@@ -111,6 +124,8 @@ class AnalyzerManagerTests(unittest.TestCase):
             [FakeAnalyzer, FakeAnalyzer, FakeDummyAnalyzer],
             self.model_repository, self.data_service)
         FakeAnalyzer.stub = None
+        FakeDummyAnalyzer.skip_train = False
+        FakeAnalyzer.service = None
 
     def test_process_review_event(self):
         request = ReviewEvent()
@@ -155,6 +170,22 @@ class AnalyzerManagerTests(unittest.TestCase):
         self.assertIsInstance(self.model_repository.set_calls[1][2], FakeModel)
         self.assertEqual(FakeAnalyzer.service.get_bblfsh(), "YYY")
         self.assertFalse(FakeDummyAnalyzer.trained)
+
+    def test_process_push_event_skip(self):
+        FakeAnalyzer.skip_train = True
+        request = PushEvent()
+        request.commit_revision.head.internal_repository_url = "wow"
+        request.commit_revision.head.reference_name = "refs/heads/master"
+        request.commit_revision.head.hash = "80" * 20
+        response = self.manager.process_push_event(request)
+        self.assertIsInstance(response, EventResponse)
+        self.assertEqual(response.analyzer_version, "fake.analyzer.FakeAnalyzer/1 "
+                                                    "fake.analyzer.FakeAnalyzer/1 "
+                                                    "fake.analyzer.FakeDummyAnalyzer/1")
+        self.assertEqual(len(response.comments), 0)
+        self.assertEqual(len(self.model_repository.get_calls), 2)
+        self.assertEqual(len(self.model_repository.set_calls), 0)
+        self.assertIsNone(FakeAnalyzer.service)
 
 
 class AnalyzerManagerUtilsTests(unittest.TestCase):

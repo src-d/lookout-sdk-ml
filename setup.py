@@ -40,7 +40,7 @@ setup(
         "psycopg2-binary>=2.7,<3.0",
         "modelforge>=0.9.3,<0.10.0",
         "requirements-parser>=0.2.0,<2.0",
-        "lookout-sdk>=0.2.0,<0.3",
+        "lookout-sdk>=0.4.1,<0.5",
         "typing;python_version<'3.5'",
     ],
     extras_require={
