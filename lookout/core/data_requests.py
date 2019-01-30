@@ -2,7 +2,7 @@ import functools
 import logging
 import os
 import threading
-from typing import Iterable, Optional, Tuple
+from typing import Iterator, Optional, Tuple
 
 import bblfsh
 import grpc
@@ -186,7 +186,7 @@ def with_uasts_and_contents(func):  # noqa: D401
 
 
 def request_changes(stub: DataStub, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
-                    contents: bool, uast: bool) -> Iterable[Change]:
+                    contents: bool, uast: bool) -> Iterator[Change]:
     """
     Invoke GRPC API and get the changes. Used by `with_changed_uasts()` and Review events.
 
@@ -202,7 +202,7 @@ def request_changes(stub: DataStub, ptr_from: ReferencePointer, ptr_to: Referenc
 
 
 def request_files(stub: DataStub, ptr: ReferencePointer, contents: bool, uast: bool
-                  ) -> Iterable[File]:
+                  ) -> Iterator[File]:
     """
     Invoke GRPC API and get the files. Used by `with_uasts()` and Push events.
 
