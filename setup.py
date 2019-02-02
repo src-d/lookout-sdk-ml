@@ -9,6 +9,8 @@ with open(os.path.join(os.path.dirname(__file__), "README.md")) as f:
     long_description = f.read()
 
 tests_require = ["docker>=3.4.0,<4.0"]
+exclude_packages = ("lookout.core.tests",) \
+    if not os.getenv("LOOKOUT_SDK_ML_SETUP_INCLUDE_TESTS", False) else ()
 
 setup(
     name="lookout-sdk-ml",
@@ -22,14 +24,14 @@ setup(
     author_email="machine-learning@sourced.tech",
     url="https://github.com/src-d/lookout-sdk-ml",
     download_url="https://github.com/src-d/lookout-sdk-ml",
-    packages=find_packages(exclude=("lookout.core.tests",)),
+    packages=find_packages(exclude=exclude_packages),
     namespace_packages=["lookout"],
     entry_points={
         "console_scripts": ["analyzer=lookout.__main__:main"],
     },
     keywords=["machine learning on source code", "babelfish", "lookout"],
     install_requires=[
-        "bblfsh>=2.12.6,<3.0",
+        "bblfsh>=2.12.7,<3.0",
         "stringcase>=1.2.0,<2.0",
         "sqlalchemy>=1.0.0,<2.0",
         "sqlalchemy-utils>=0.33,<2.0",
@@ -39,15 +41,16 @@ setup(
         "humanfriendly>=4.0,<5.0",
         "psycopg2-binary>=2.7,<3.0",
         "modelforge>=0.9.3,<0.10.0",
-        "lookout-sdk>=0.2.0,<0.3",
-        "tqdm>=4.28.1,<5.0",
+        "requirements-parser>=0.2.0,<2.0",
+        "lookout-sdk>=0.4.1,<0.5",
         "typing;python_version<'3.5'",
     ],
     extras_require={
         "test": tests_require,
     },
     tests_require=tests_require,
-    package_data={"": ["license.md", "README.md", "requirements.txt"], },
+    package_data={"": ["../license.md", "README.md", "../requirements.txt"],
+                  "lookout.core": ["container/*", "examples/*.py"]},
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",

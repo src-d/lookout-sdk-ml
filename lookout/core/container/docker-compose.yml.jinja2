@@ -1,0 +1,41 @@
+version: "3.3"
+
+services:
+  lookout:
+    image: "srcd/lookout:latest"
+    network_mode: "host"
+    depends_on:
+      - postgres
+    environment:
+      GITHUB_USER: ${GITHUB_USER:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    ports:
+      - "10301:10301"
+    entrypoint: ["/bin/sh"]
+    command: ["-c", "wait-for-port 0.0.0.0 9930 && lookoutd migrate && lookoutd serve"]
+    volumes:
+      - ./lookout.yml:/config.yml
+      - ./wait-for-port.sh:/usr/local/bin/wait-for-port
+  analyzer:
+    image: "{{ package_name }}:latest"
+    network_mode: "host"
+    ports:
+      - "9930:9930"
+    volumes:
+      - /tmp/models:/models
+      - ./wait-for-postgres.sh:/usr/local/bin/wait-for-postgres
+    entrypoint: ["/bin/sh"]
+    command: ["-c", "wait-for-postgres 0.0.0.0 5432 postgres postgres && analyzer run {{ analyzers }} -c analyzers.yml"]
+  bblfsh:
+    image: "bblfsh/bblfshd:v2.9.0-drivers"
+    privileged: true
+    ports:
+      - "9432:9432"
+  postgres:
+    image: "postgres:alpine"
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lookout

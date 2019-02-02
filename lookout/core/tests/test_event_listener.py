@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
@@ -29,13 +30,15 @@ class EventListenerTests(unittest.TestCase):
 
     def test_review(self):
         listener = EventListener("localhost:%d" % self.port, self.handlers).start()
-        server.run("review", self.COMMIT_FROM, self.COMMIT_TO, self.port)
+        server.run("review", self.COMMIT_FROM, self.COMMIT_TO, self.port,
+                   git_dir=os.getenv("LOOKOUT_SDK_ML_TESTS_GIT_DIR", "."))
         self.assertIsInstance(self.handlers.request, ReviewEvent)
         del listener
 
     def test_push(self):
         listener = EventListener("localhost:%d" % self.port, self.handlers).start()
-        server.run("push", self.COMMIT_FROM, self.COMMIT_TO, self.port)
+        server.run("push", self.COMMIT_FROM, self.COMMIT_TO, self.port,
+                   git_dir=os.getenv("LOOKOUT_SDK_ML_TESTS_GIT_DIR", "."))
         self.assertIsInstance(self.handlers.request, PushEvent)
         del listener
 

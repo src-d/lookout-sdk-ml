@@ -1,10 +1,10 @@
 import logging
-from typing import Iterable, Sequence
+from typing import Iterable, Optional, Sequence
 
 from google.protobuf.struct_pb2 import ListValue as ProtobufList
 from google.protobuf.struct_pb2 import Struct as ProtobufStruct
 
-from lookout.core.analyzer import Analyzer, DummyAnalyzerModel, ReferencePointer
+from lookout.core.analyzer import Analyzer, AnalyzerModel, DummyAnalyzerModel, ReferencePointer
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import EventResponse
 from lookout.core.data_requests import DataService
@@ -67,10 +67,7 @@ class AnalyzerManager(EventHandlers):
                 mycfg = {}
                 self._log.debug("no config was provided for %s", analyzer.name)
             if analyzer.model_type != DummyAnalyzerModel:
-                model, cache_miss = self._model_repository.get(
-                    self._model_id(analyzer), analyzer.model_type, base_ptr.url)
-                if cache_miss:
-                    self._log.info("cache miss: %s", analyzer.name)
+                model = self._get_model(analyzer, base_ptr.url)
                 if model is None:
                     self._log.info("training: %s", analyzer.name)
                     submit_event("%s.train" % analyzer.name, 1)
@@ -93,16 +90,23 @@ class AnalyzerManager(EventHandlers):
         Callback for push events invoked by EventListener.
         """
         ptr = ReferencePointer.from_pb(request.commit_revision.head)
+        data_service = self._data_service
         for analyzer in self._analyzers:
             if analyzer.model_type == DummyAnalyzerModel:
                 continue
-            self._log.debug("training %s", analyzer.name)
             try:
                 mycfg = self._protobuf_struct_to_dict(request.configuration[analyzer.name])
             except (KeyError, ValueError):
                 mycfg = {}
+            model = self._get_model(analyzer, ptr.url)
+            if model is not None:
+                must_train = analyzer.check_training_required(model, ptr, mycfg, data_service)
+                if not must_train:
+                    self._log.info("skipped training %s", analyzer.name)
+                    continue
+            self._log.debug("training %s", analyzer.name)
             submit_event("%s.train" % analyzer.name, 1)
-            model = analyzer.train(ptr, mycfg, self._data_service)
+            model = analyzer.train(ptr, mycfg, data_service)
             self._model_repository.set(self._model_id(analyzer), ptr.url, model)
         response = EventResponse()
         response.analyzer_version = self.version
@@ -147,5 +151,11 @@ class AnalyzerManager(EventHandlers):
                 else:
                     if isinstance(d[key], float) and d[key].is_integer():
                         d[key] = int(d[key])
-
         return mycfg
+
+    def _get_model(self, analyzer: Type[Analyzer], url: str) -> Optional[AnalyzerModel]:
+        model, cache_miss = self._model_repository.get(
+            self._model_id(analyzer), analyzer.model_type, url)
+        if cache_miss:
+            self._log.info("cache miss: %s", analyzer.name)
+        return model

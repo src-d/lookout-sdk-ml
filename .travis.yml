@@ -14,49 +14,61 @@ stages:
   - name: deploy
     if: tag =~ .*
 _install: &_install
+  - export LOOKOUT_SDK_ML_TESTS_GIT_DIR=$(pwd)
+  - version=$(python3 setup.py --version)
+  - grep srcd/lookout-sdk-ml:$version lookout/core/container/Dockerfile.jinja2
+  - docker build -t srcd/lookout-sdk-ml:$version .
   - pip install --upgrade pip cython codecov
-  - pip install -e .[test]
+  - LOOKOUT_SDK_ML_SETUP_INCLUDE_TESTS=1 pip install .[test]
+  - cd $(pip show lookout-sdk-ml|grep Location|cut -d' ' -f2)/lookout/core
 _before_script: &_before_script
+  - cd -
   - travis_retry make bblfsh-start
+  - cd -
 _coverage: &_coverage
-  - SCRIPT="coverage run --concurrency=multiprocessing -m unittest discover && travis_retry coverage combine"
+  - coverage run --concurrency=multiprocessing -m unittest discover
+  - travis_retry coverage combine
 matrix:
   fast_finish: true
   include:
     - stage: style
       python: 3.7
-      env: SCRIPT="make check"
+      script:
+        - make check
       install:
         - pip install -r requirements-lint.txt
     - stage: test
       python: 3.5
-      env: *_coverage
+      script: *_coverage
       install: *_install
       before_script: *_before_script
     - stage: test
       python: 3.6
-      env: *_coverage
+      script: *_coverage
       install: *_install
       before_script: *_before_script
     - stage: test
       python: 3.7
-      env: *_coverage
+      script: *_coverage
       install: *_install
       before_script: *_before_script
       after_success:
         - codecov
     - stage: test
       python: 3.7
-      env: SCRIPT="make docs && make docker-test"
+      script:
+        - make docs
+        - make docker-test
       install:
         - pip install -r docs/requirements.txt
         - pip install -r requirements.txt
+        - cd $(pwd)
       before_script: *_before_script
     - stage: deploy
       python: 3.5
       install:
         - pip install --upgrade pip
-        - pip install twine
+        - pip install twine pyopenssl
       script:
         - test $(python3 setup.py --version) == $TRAVIS_TAG
         - python3 setup.py bdist_wheel
@@ -66,7 +78,5 @@ matrix:
         skip_cleanup: true
         on:
           tags: true
-script:
-  - (eval "$SCRIPT")
 notifications:
   email: false

@@ -2,10 +2,11 @@ import functools
 import logging
 import os
 import threading
-from typing import Iterable, Optional, Tuple
+from typing import Iterator, Optional, Tuple
 
 import bblfsh
 import grpc
+from lookout.sdk.grpc import create_channel
 
 from lookout.core.analyzer import Analyzer, AnalyzerModel, ReferencePointer
 from lookout.core.api.service_analyzer_pb2 import Comment
@@ -20,7 +21,6 @@ class DataService:
     Retrieves UASTs/files from the Lookout server.
     """
 
-    GRPC_MAX_MESSAGE_SIZE = 100 * 1024 * 1024
     _log = logging.getLogger("DataService")
 
     def __init__(self, address: str):
@@ -82,12 +82,7 @@ class DataService:
     def _get_channel(self) -> grpc.Channel:
         channel = getattr(self._data_request_local, "channel", None)
         if channel is None:
-            self._data_request_local.channel = channel = grpc.insecure_channel(
-                self._data_request_address,
-                options=[
-                    ("grpc.max_send_message_length", self.GRPC_MAX_MESSAGE_SIZE),
-                    ("grpc.max_receive_message_length", self.GRPC_MAX_MESSAGE_SIZE),
-                ])
+            self._data_request_local.channel = channel = create_channel(self._data_request_address)
             self._data_request_channels.append(channel)
             self._log.info("Opened %s", channel)
         return channel
@@ -191,7 +186,7 @@ def with_uasts_and_contents(func):  # noqa: D401
 
 
 def request_changes(stub: DataStub, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
-                    contents: bool, uast: bool) -> Iterable[Change]:
+                    contents: bool, uast: bool) -> Iterator[Change]:
     """
     Invoke GRPC API and get the changes. Used by `with_changed_uasts()` and Review events.
 
@@ -207,7 +202,7 @@ def request_changes(stub: DataStub, ptr_from: ReferencePointer, ptr_to: Referenc
 
 
 def request_files(stub: DataStub, ptr: ReferencePointer, contents: bool, uast: bool
-                  ) -> Iterable[File]:
+                  ) -> Iterator[File]:
     """
     Invoke GRPC API and get the files. Used by `with_uasts()` and Push events.
 

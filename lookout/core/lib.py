@@ -3,12 +3,12 @@ from collections import defaultdict
 from difflib import SequenceMatcher
 import logging
 from os.path import isfile
+import random
 import re
-from typing import Dict, Iterable, List, Optional, Sequence
+from typing import Callable, Dict, Iterable, Iterator, List, Optional, Sequence
 
 from bblfsh import BblfshClient, Node
 from bblfsh.client import NonUTF8ContentException
-from tqdm import tqdm
 
 from lookout.core.api.service_data_pb2 import File
 from lookout.core.garbage_exclusion import GARBAGE_PATTERN
@@ -112,8 +112,10 @@ def filter_filepaths(filepaths: Iterable[str], exclude_pattern: Optional[str] = 
         yield filepath
 
 
-def filter_files(filenames: Iterable[str], line_length_limit: int, client: BblfshClient,
-                 language: str, log: logging.Logger = None) -> Iterable[File]:
+def parse_files(filenames: Iterable[str], line_length_limit: int, overall_size_limit: int,
+                client: BblfshClient, language: str, random_state: int = 7,
+                progress_tracker: Callable = lambda x: x, log: Optional[logging.Logger] = None
+                ) -> Iterator[File]:
     """
     Filter files based on `language` and their maximum line length.
 
@@ -121,27 +123,45 @@ def filter_files(filenames: Iterable[str], line_length_limit: int, client: Bblfs
     :param line_length_limit: maximum line length to accept a file.
     :param client: Babelfish client. Babelfish server should be started accordingly.
     :param language: Language to consider. Will discard the other languages.
+    :param overall_size_limit: maximum cumulative files size in bytes. \
+                               The files are discarded after reaching this limit.
+    :param random_state: random generator state for shuffling the files.
+    :param progress_tracker: Optional progress metric whenn iterating over the input files.
     :param log: logger to use to report the number of excluded files.
     :return: files passed through the filter and the number of files which were excluded.
     """
-    passed = []
     n_parsed = 0
-    for filename in tqdm(filter_filepaths(filenames)):
-        try:
-            res = client.parse(filename)
-        except NonUTF8ContentException:
-            # skip files that can't be parsed because of UTF-8 decoding errors.
-            continue
-        if res.status == 0 and res.language.lower() == language.lower():
-            uast = res.uast
-            path = filename
-            n_parsed += 1
-            with open(filename, "rb") as f:
-                content = f.read()
-            if len(max(content.splitlines(), key=len, default=b"")) <= line_length_limit:
-                passed.append(File(content=content, uast=uast, path=path,
-                                   language=res.language.lower()))
+    line_passed = []
+    for filename in progress_tracker(filter_filepaths(filenames)):
+        with open(filename, "rb") as f:
+            content = f.read()
+        if len(max(content.splitlines(), key=len, default=b"")) <= line_length_limit:
+            try:
+                res = client.parse(filename)
+            except NonUTF8ContentException:
+                # skip files that can't be parsed because of UTF-8 decoding errors.
+                continue
+            if res.status == 0 and res.language.lower() == language.lower():
+                uast = res.uast
+                path = filename
+                n_parsed += 1
+                line_passed.append(File(content=content, uast=uast, path=path,
+                                        language=res.language.lower()))
     if log is not None:
         log.debug("excluded %d/%d %s files by max line length %d",
-                  n_parsed - len(passed), n_parsed, language, line_length_limit)
-    return passed
+                  n_parsed - len(line_passed), n_parsed, language, line_length_limit)
+    line_passed.sort(key=lambda x: x.path)
+    random.seed(random_state)
+    line_passed = random.sample(line_passed, k=len(line_passed))
+    size = 0
+    size_passed = []
+    for file in line_passed:
+        size += len(file.content)
+        if size > overall_size_limit:
+            break
+        size_passed.append(file)
+    if log is not None:
+        log.debug("excluded %d/%d %s files by max overall size %d",
+                  len(line_passed) - len(size_passed), len(line_passed), language,
+                  overall_size_limit)
+    return size_passed

@@ -40,7 +40,7 @@ Create `my_analyzer.py`:
 
 ```python
 import logging
-from typing import Iterable, Dict, Any
+from typing import Any, Dict, Iterable
 
 from bblfsh import Node
 
@@ -65,7 +65,7 @@ class MyModel(AnalyzerModel):
 class MyAnalyzer(Analyzer):
     model_type = MyModel
     version = 1
-    name = "my_analyzer.MyAnalyzer"
+    name = "examples.MyAnalyzer"
     description = "Reports the changes in UAST node counts."
     _log = logging.getLogger("MyAnalyzer")
 
@@ -106,6 +106,7 @@ class MyAnalyzer(Analyzer):
             stack.extend(node.children)
         return count
 
+
 analyzer_class = MyAnalyzer
 ```
 
@@ -114,6 +115,11 @@ objects with UASTs and file contents. If you need only the UASTs, use
 `@with_changed_uasts` and `@with_uasts` respectively.
 
 ## Running
+
+There are two ways to test an analyzer: local debug run with `lookout-sdk`
+tool and GitHub run.
+
+### Local debug
 
 Launch the analyzer:
 
@@ -238,3 +244,16 @@ You should see the comments in the log:
 [2018-08-30T12:17:52.878997694+02:00]  INFO file comment app=lookout file=worktree_windows.go text=Go 89 > 157
 [2018-08-30T12:17:52.879017207+02:00]  INFO status: success app=lookout
 ```
+
+### GitHub
+
+You need to [generate a GitHub personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)
+with **repo** permissions. You should also decide which GitHub repository
+to use for your assisted code review tests. Create a sample pull request in that
+repository. Then execute:
+
+```
+analyzer package my_analyzer -u your_user -t your_token -r your/repo -w /tmp/pkg -y
+```
+
+You should eventually see the comments to your PR on GitHub authored by your user.
