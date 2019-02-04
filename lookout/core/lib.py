@@ -132,10 +132,12 @@ def parse_files(filenames: Iterable[str], line_length_limit: int, overall_size_l
     """
     n_parsed = 0
     line_passed = []
+    n_filenames_filtered = len(list(filter_filepaths(filenames)))
     for filename in progress_tracker(filter_filepaths(filenames)):
         with open(filename, "rb") as f:
             content = f.read()
         if len(max(content.splitlines(), key=len, default=b"")) <= line_length_limit:
+            n_parsed += 1
             try:
                 res = client.parse(filename)
             except NonUTF8ContentException:
@@ -144,12 +146,16 @@ def parse_files(filenames: Iterable[str], line_length_limit: int, overall_size_l
             if res.status == 0 and res.language.lower() == language.lower():
                 uast = res.uast
                 path = filename
-                n_parsed += 1
                 line_passed.append(File(content=content, uast=uast, path=path,
                                         language=res.language.lower()))
     if log is not None:
+        log.debug("excluded %d/%d files based on their path",
+                  len(filenames) - n_filenames_filtered, len(filenames))
         log.debug("excluded %d/%d %s files by max line length %d",
-                  n_parsed - len(line_passed), n_parsed, language, line_length_limit)
+                  n_filenames_filtered - n_parsed, n_filenames_filtered, language,
+                  line_length_limit)
+        log.debug("excluded %d/%d %s files due to parsing issues",
+                  n_parsed - len(line_passed), n_parsed, language)
     line_passed.sort(key=lambda x: x.path)
     random.seed(random_state)
     line_passed = random.sample(line_passed, k=len(line_passed))
