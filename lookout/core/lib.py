@@ -94,10 +94,10 @@ def files_by_language(files: Iterable[File]) -> Dict[str, Dict[str, File]]:
 def filter_filepaths(filepaths: Iterable[str], exclude_pattern: Optional[str] = None,
                      ) -> Iterable[str]:
     """
-    Mirror of the file filtering used in the format analyzer for use by debugging tools.
+    Filter files when their path contain a specific pattern.
 
     :param filepaths: Iterable of filepaths to filter.
-    :param exclude_pattern: Pattern to reject files based on their path. If None, uses the pattern
+    :param exclude_pattern: Regular expression to reject files based on their path. If None, uses the pattern
                             currently in use in lookout.core. Use "" to not filter anything.
     :return Iterable of paths, filtered.
     """
@@ -112,14 +112,22 @@ def filter_filepaths(filepaths: Iterable[str], exclude_pattern: Optional[str] = 
         yield filepath
 
 
-def parse_files(filenames: Iterable[str], line_length_limit: int, overall_size_limit: int,
+def filter_files_by_line_length()
+
+
+def parse_files(filepaths: Iterable[str], line_length_limit: int, overall_size_limit: int,
                 client: BblfshClient, language: str, random_state: int = 7,
                 progress_tracker: Callable = lambda x: x, log: Optional[logging.Logger] = None
                 ) -> Iterator[File]:
     """
-    Filter files based on `language` and their maximum line length.
+    Parse files with Babelfish.
 
-    :param filenames: paths to the files to filter.
+    If a file has lines longer than `line_length_limit`, it is skipped. If the summed size of parsed files \
+    exceeds `overall_size_limit` the rest of the files is skipped. Files paths are filtered with \
+    `filter_filepaths()`. The order in which the files are parsed is random - and hence different \
+    from `filepaths`.
+
+    :param filepaths: paths to the files to filter.
     :param line_length_limit: maximum line length to accept a file.
     :param client: Babelfish client. Babelfish server should be started accordingly.
     :param language: Language to consider. Will discard the other languages.
@@ -132,8 +140,8 @@ def parse_files(filenames: Iterable[str], line_length_limit: int, overall_size_l
     """
     n_parsed = 0
     line_passed = []
-    n_filenames_filtered = len(list(filter_filepaths(filenames)))
-    for filename in progress_tracker(filter_filepaths(filenames)):
+    n_filepaths_filtered = len(list(filter_filepaths(filepaths)))
+    for filename in progress_tracker(filter_filepaths(filepaths)):
         with open(filename, "rb") as f:
             content = f.read()
         if len(max(content.splitlines(), key=len, default=b"")) <= line_length_limit:
@@ -150,9 +158,9 @@ def parse_files(filenames: Iterable[str], line_length_limit: int, overall_size_l
                                         language=res.language.lower()))
     if log is not None:
         log.debug("excluded %d/%d files based on their path",
-                  len(filenames) - n_filenames_filtered, len(filenames))
+                  len(filepaths) - n_filepaths_filtered, len(filepaths))
         log.debug("excluded %d/%d %s files by max line length %d",
-                  n_filenames_filtered - n_parsed, n_filenames_filtered, language,
+                  n_filepaths_filtered - n_parsed, n_filepaths_filtered, language,
                   line_length_limit)
         log.debug("excluded %d/%d %s files due to parsing issues",
                   n_parsed - len(line_passed), n_parsed, language)
