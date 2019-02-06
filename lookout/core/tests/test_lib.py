@@ -1,3 +1,4 @@
+import os
 from tempfile import NamedTemporaryFile
 import unittest
 
@@ -5,7 +6,7 @@ from bblfsh import BblfshClient, Node, Position
 
 from lookout.core.api.service_data_pb2 import File
 from lookout.core.lib import extract_changed_nodes, files_by_language, \
-    find_deleted_lines, find_new_lines, parse_files
+    filter_files_by_line_length, find_deleted_lines, find_new_lines, parse_files
 
 
 class LibTests(unittest.TestCase):
@@ -80,6 +81,12 @@ class LibTests(unittest.TestCase):
         result = files_by_language(files)
         self.assertEqual({"js": 2, "python": 5, "ruby": 7}, {k: len(v) for k, v in result.items()})
         return result
+
+    def test_files_by_line_length(self):
+        filepath1 = os.path.join(os.path.dirname(__file__), "test_data_requests.py")
+        filepath2 = os.path.join(os.path.dirname(__file__), "__init__.py")
+        filtered = filter_files_by_line_length([filepath1, filepath2], 50)
+        self.assertEqual(len(filtered), 1)
 
     def test_parse_files(self):
 
