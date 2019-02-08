@@ -17,6 +17,10 @@ from lookout.core.ports import Type
 
 
 class FakeModel(AnalyzerModel):
+    NAME = "fake"
+    VENDOR = "public domain"
+    DESCRIPTION = "fake model"
+
     def _generate_tree(self) -> dict:
         return {}
 
