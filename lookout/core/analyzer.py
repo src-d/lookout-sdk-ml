@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List, Mapping, NamedTuple
+from typing import Any, BinaryIO, Iterable, List, Mapping, NamedTuple, Optional, Union
 
 from modelforge import Model
 
@@ -37,7 +37,11 @@ class AnalyzerModel(Model):
     All models used in `Analyzer`-s must derive from this base class.
     """
 
-    def __init__(self, **kwargs):  # noqa: D401
+    NAME = Model.GENERIC_NAME
+    VENDOR = "<unknown>"
+    DESCRIPTION = "<unknown>"
+
+    def __init__(self, log_level: int = logging.INFO, **kwargs):  # noqa: D401
         """
         Prepare a dummy instance of the model. We expect that `load()` or `construct()` will be \
         called afterwards.
@@ -45,13 +49,14 @@ class AnalyzerModel(Model):
         Defines:
         `name` - name of the model. Corresponds to the bound analyzer's class name and version.
         `ptr` - state of the Git repository on which the model was trained.
+        :param log_level: Logger's verbosity.
         :param kwargs: passed to the upstream's `__init__`.
         """
-        super().__init__(log_level=kwargs.get("log_level", logging.INFO))
-        self.name = "<unknown name>"
+        super().__init__(log_level=log_level)
         self.ptr = ReferencePointer("<unknown url>", "<unknown reference>", "<unknown commit>")
 
-    def construct(self, analyzer: Type["Analyzer"], ptr: ReferencePointer):
+    @classmethod
+    def generate(cls, analyzer: Type["Analyzer"], ptr: ReferencePointer) -> "AnalyzerModel":
         """
         Initialize the model (`__init__` does not do the real work to allow `load()`).
 
@@ -59,12 +64,18 @@ class AnalyzerModel(Model):
         :param ptr: Git repository state pointer.
         :return: self
         """
-        assert isinstance(self, analyzer.model_type)
-        self.name = analyzer.name
-        self.derive([analyzer.version])
-        self.ptr = ptr
-        self.meta["__init__"] = True
-        return self
+        assert issubclass(cls, analyzer.model_type)
+
+        class RealModel(cls):
+            NAME = analyzer.name
+            VENDOR = analyzer.vendor
+            DESCRIPTION = "Model bound to %s Lookout analyzer." % analyzer.name
+
+        RealModel.__name__ = analyzer.name
+        model = RealModel()
+        model.derive([analyzer.version])
+        model.ptr = ptr
+        return model
 
     def dump(self) -> str:
         """
@@ -74,9 +85,23 @@ class AnalyzerModel(Model):
         """
         return "%s/%s %s %s" % (self.name, self.version, self.ptr.url, self.ptr.commit)
 
+    def save(self, output: Union[str, BinaryIO], series: Optional[str] = "Lookout",
+             deps: Iterable = tuple(), create_missing_dirs: bool = True):
+        """
+        Serialize the model to a file.
+
+        :param output: Path to the file or a file object.
+        :param series: Name of the model series.
+        :param deps: List of the dependencies.
+        :param create_missing_dirs: create missing directories in output path if the output is a \
+                                    path.
+        :return: self
+        """
+        return super().save(output=output, series=series, deps=deps,
+                            create_missing_dirs=create_missing_dirs)
+
     def _load_tree(self, tree: dict):
         self.ptr = ReferencePointer(*tree["ptr"])
-        self.name = tree["name"]
 
     def _generate_tree(self) -> dict:
         return {"ptr": list(self.ptr), "name": self.name}
@@ -89,6 +114,7 @@ class DummyAnalyzerModel(AnalyzerModel):
 
     NAME = "dummy"
     VENDOR = "public domain"
+    DESCRIPTION = "Model that does not contain anything is acts as a stub for stateless analyzers."
 
 
 class Analyzer:
@@ -105,6 +131,7 @@ class Analyzer:
     version = None  # type: int
     model_type = None  # type: Type[AnalyzerModel]
     name = None  # type: str
+    vendor = None  # type: str
 
     def __init__(self, model: AnalyzerModel, url: str, config: Mapping[str, Any]):
         """
@@ -162,7 +189,7 @@ class Analyzer:
         :param ptr: state of Git repository which is used to generate the model.
         :return: Instance of the model.
         """
-        return cls.model_type().construct(cls, ptr)
+        return cls.model_type.generate(cls, ptr)
 
     @classmethod
     def check_training_required(
