@@ -72,7 +72,6 @@ def run_analyzers(args: argparse.Namespace):
     :param args: Parsed command line arguments.
     :return: None
     """
-    slogging.setup(args.log_level, args.log_structured, args.log_config_path)
     log = logging.getLogger("run")
     model_repository = create_model_repo_from_args(args)
     log.info("Created %s", model_repository)
@@ -106,7 +105,6 @@ def init_repo(args: argparse.Namespace):
     :param args: Parsed command line arguments.
     :return: None
     """
-    slogging.setup(args.log_level, False, args.log_config_path)
     repo = create_model_repo_from_args(args)
     repo.init()
 
@@ -154,18 +152,6 @@ def add_model_repository_args(parser):
                help="Additional keyword arguments to SQLAlchemy database engine.")
 
 
-def add_logging_args(parser):
-    """
-    Add command line flags specific to logging.
-
-    :param parser: `argparse` parser where to add new flags.
-    """
-    parser.add("--log-level", default="INFO", choices=logging._nameToLevel,
-               help="Logging verbosity.")
-    parser.add("--log-config-path",
-               help="Path to the file which sets individual log levels of domains.")
-
-
 def add_analyzer_arg(parser):
     """
     Add the variable count argument to specify analyzers.
@@ -197,10 +183,8 @@ def create_parser() -> configargparse.ArgParser:
     run_parser = add_parser(
         "run", "Launch a new service with the specified (one or more) analyzers.")
     run_parser.set_defaults(handler=run_analyzers)
-    add_logging_args(run_parser)
+    slogging.add_logging_args(run_parser)
     add_analyzer_arg(run_parser)
-    run_parser.add("--log-structured", action="store_true",
-                   help="Enable structured logging (compatible with k8s).")
     run_parser.add("-c", "--config", is_config_file=True,
                    help="Path to the configuration file with option defaults.")
     run_parser.add("-s", "--server", required=True,
@@ -214,7 +198,7 @@ def create_parser() -> configargparse.ArgParser:
     init_parser = add_parser("init", "Initialize the model repository.")
     init_parser.set_defaults(handler=init_repo)
     add_model_repository_args(init_parser)
-    add_logging_args(init_parser)
+    slogging.add_logging_args(init_parser)
 
     tool_parser = add_parser("tool", "Invoke the tooling of a given analyzer.")
     tool_parser.set_defaults(handler=run_analyzer_tool)
@@ -226,7 +210,7 @@ def create_parser() -> configargparse.ArgParser:
         "Package several analyzers to a Docker container and write a sample Docker Compose config "
         "for Lookout.")
     package_parser.set_defaults(handler=package_cmdline_entry)
-    add_logging_args(package_parser)
+    slogging.add_logging_args(package_parser)
     add_analyzer_arg(package_parser)
     package_parser.add("-w", "--workdir", help="Generate files in this directory.",
                        required=True)
