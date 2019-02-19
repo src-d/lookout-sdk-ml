@@ -2,10 +2,9 @@
 from collections import defaultdict
 from difflib import SequenceMatcher
 import logging
-from os.path import isfile
 import random
 import re
-from typing import Callable, Dict, Iterable, List, Optional, Sequence
+from typing import Callable, Dict, Iterable, Iterator, List, Optional, Sequence
 
 from bblfsh import BblfshClient, Node
 from bblfsh.client import NonUTF8ContentException
@@ -92,7 +91,7 @@ def files_by_language(files: Iterable[File]) -> Dict[str, Dict[str, File]]:
 
 
 def filter_files_by_path(filepaths: Iterable[str], exclude_pattern: Optional[str] = None,
-                         ) -> Iterable[str]:
+                         ) -> Iterator[str]:
     """
     Filter out files by specific patterns in their path.
 
@@ -103,40 +102,62 @@ def filter_files_by_path(filepaths: Iterable[str], exclude_pattern: Optional[str
                             filtering is disabled.
     :return: List of paths, filtered.
     """
-    passed = []
     if exclude_pattern is None:
         exclude_pattern = GARBAGE_PATTERN
     exclude_compiled_pattern = re.compile(exclude_pattern) if exclude_pattern else None
     for filepath in filepaths:
-        if not isfile(filepath):
-            continue
         if exclude_compiled_pattern and exclude_compiled_pattern.search(filepath):
             continue
-        passed.append(filepath)
-    return passed
+        yield filepath
 
 
-def filter_files_by_line_length(filepaths: Iterable[str], line_length_limit: int) -> Iterable[str]:
+def filter_files_by_line_length(filepaths: Iterable[str], content_getter: callable,
+                                line_length_limit: int) -> Iterator[str]:
     """
     Filter out files that have lines longer than `line_length_limit`.
 
     :param filepaths: Paths to the files to filter.
+    :param content_getter: Function which returns the file byte content by it's path.
     :param line_length_limit: Maximum line length to accept a file. \
                               We measure the length in bytes, not in Unicode characters.
     :return: Files passed through the maximum line length filter.
     """
-    line_passed = []
     for filepath in filepaths:
-        with open(filepath, "rb") as f:
-            content = f.read()
+        content = content_getter(filepath)
         if len(max(content.splitlines(), key=len, default=b"")) <= line_length_limit:
-            line_passed.append(filepath)
-    return line_passed
+            yield filepath
 
 
-def parse_files(filepaths: Iterable[str], line_length_limit: int, overall_size_limit: int,
-                client: BblfshClient, language: str, random_state: int = 7,
-                progress_tracker: Callable = lambda x: x, log: Optional[logging.Logger] = None
+def filter_files_by_overall_size(filepaths: Iterable[str], content_getter: callable,
+                                 overall_size_limit: int, random_state: int = 7) -> Iterator[str]:
+    """
+    Filter out files once the overall passed size is greater than the specified limit.
+
+    The files are randomly shuffled before filtering.
+
+    :param filepaths: Paths to the files to filter.
+    :param content_getter: Function which returns the file byte content by it's path.
+    :param overall_size_limit: Maximum cumulative file size in bytes. \
+                               The files are discarded after reaching this limit.
+    :param random_state: Random generator state for shuffling the files.
+    :return: Files passed through the overall size filter.
+    """
+    filepaths = sorted(filepaths)
+    random.seed(random_state)
+    shuffled = random.sample(filepaths, k=len(filepaths))
+    size = 0
+    for key in shuffled:
+        content = content_getter(key)
+        size += len(content)
+        if size > overall_size_limit:
+            break
+        yield key
+
+
+def parse_files(filepaths: Sequence[str], content_getter: callable, line_length_limit: int,
+                overall_size_limit: int, client: BblfshClient, language: str,
+                random_state: int = 7, progress_tracker: Callable = lambda x: x,
+                log: Optional[logging.Logger] = None
                 ) -> Iterable[File]:
     """
     Parse files with Babelfish.
@@ -147,6 +168,7 @@ def parse_files(filepaths: Iterable[str], line_length_limit: int, overall_size_l
     and hence different from `filepaths`.
 
     :param filepaths: File paths to filter.
+    :param content_getter: Function which returns the file byte content by it's path.
     :param line_length_limit: Maximum line length to accept a file.
     :param overall_size_limit: Maximum cumulative files size in bytes. \
                                The files are discarded after reaching this limit.
@@ -158,9 +180,9 @@ def parse_files(filepaths: Iterable[str], line_length_limit: int, overall_size_l
     :return: `File`-s with parsed UASTs and which passed through the filters.
     """
     random.seed(random_state)
-    filepaths_filtered = filter_files_by_path(filepaths)
-    files_filtered_by_line_length = filter_files_by_line_length(filepaths_filtered,
-                                                                line_length_limit)
+    filepaths_filtered = list(filter_files_by_path(filepaths))
+    files_filtered_by_line_length = sorted(
+        filter_files_by_line_length(filepaths_filtered, content_getter, line_length_limit))
     files_filtered_by_line_length = random.sample(files_filtered_by_line_length,
                                                   k=len(files_filtered_by_line_length))
     size, n_parsed = 0, 0
@@ -195,3 +217,38 @@ def parse_files(filepaths: Iterable[str], line_length_limit: int, overall_size_l
                   n_parsed - len(size_passed), n_parsed, language,
                   overall_size_limit)
     return size_passed
+
+
+def filter_files(files: Sequence[File], line_length_limit: int, overall_size_limit: int,
+                 random_state: int = 7, log: Optional[logging.Logger] = None) -> List[File]:
+    """
+    Filter files based on their maximum line length and overall size.
+
+    :param files: files_by_path[key]les to filter.
+    :param line_length_limit: maximum line length to accept a file.
+    :param overall_size_limit: maximum cumulative files size in bytes. \
+                               The files are discarded after reaching this limit.
+    :param random_state: random generator state for shuffling the files.
+    :param log: logger to use to report the number of excluded files.
+    :return: files passed through the filter and the number of files which were excluded.
+    """
+    files_by_path = {f.path: f for f in files}
+
+    def content_getter(key):
+        return files_by_path[key].content
+
+    path_passed = list(filter_files_by_path([f.path for f in files]))
+    if log is not None:
+        log.debug("excluded %d/%d files by path", len(files) - len(path_passed), len(files))
+    line_passed = list(
+        filter_files_by_line_length(path_passed, content_getter, line_length_limit))
+    if log is not None:
+        log.debug("excluded %d/%d files by max line length %d",
+                  len(path_passed) - len(line_passed), len(path_passed), line_length_limit)
+    size_passed = list(
+        filter_files_by_overall_size(line_passed, content_getter, overall_size_limit,
+                                     random_state))
+    if log is not None:
+        log.debug("excluded %d/%d files by max overall size %d",
+                  len(line_passed) - len(size_passed), len(line_passed), overall_size_limit)
+    return [files_by_path[filepath] for filepath in size_passed]
