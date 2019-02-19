@@ -28,7 +28,7 @@ def fetch():
     try:
         buffer = io.BytesIO()
         with urlopen("https://github.com/src-d/lookout/releases/download/"
-                     "%s/lookout-sdk_%s_%s_amd64.tar.gz" % (binver, binver, sys.platform)
+                     "%s/lookout-sdk_%s_%s_amd64.tar.gz" % (binver, binver, sys.platform),
                      ) as response:
             copyfileobj(response, buffer)
         buffer.seek(0)
@@ -47,9 +47,8 @@ def fetch():
         raise e from None
 
 
-def run(cmd: str, fr: str, to: str, port: int, *, git_dir: str=".",
-        bblfsh: str=None, log_level: str="info", config_json: str=None
-        ) -> subprocess.CompletedProcess:
+def run(cmd: str, fr: str, to: str, port: int, *, git_dir: str=".", bblfsh: str=None,
+        log_level: str="info", config_json: str=None) -> subprocess.CompletedProcess:
     """
     Run lookout-sdk executable. If you do not have it please fetch first.
 

@@ -120,10 +120,9 @@ def run_analyzer_tool(args: argparse.Namespace) -> None:
         importlib.import_module(args.analyzer).run_cmdline_tool()
 
 
-def create_model_repo_from_args(args: argparse.Namespace
-                                ) -> SQLAlchemyModelRepository:  # noqa: D401
+def create_model_repo_from_args(args: argparse.Namespace) -> SQLAlchemyModelRepository:
     """
-    Factory function to get SQLAlchemyModelRepository.
+    Get SQLAlchemyModelRepository from command line arguments.
 
     :param args: `argparse` parsed arguments.
     :return: Constructed instance of SQLAlchemyModelRepository.

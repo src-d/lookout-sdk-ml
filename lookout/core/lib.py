@@ -90,8 +90,8 @@ def files_by_language(files: Iterable[File]) -> Dict[str, Dict[str, File]]:
     return result
 
 
-def filter_files_by_path(filepaths: Iterable[str], exclude_pattern: Optional[str] = None,
-                         ) -> Iterator[str]:
+def filter_files_by_path(filepaths: Iterable[str], exclude_pattern: Optional[str] = None) -> \
+        Iterator[str]:
     """
     Filter out files by specific patterns in their path.
 
@@ -157,8 +157,7 @@ def filter_files_by_overall_size(filepaths: Iterable[str], content_getter: calla
 def parse_files(filepaths: Sequence[str], content_getter: callable, line_length_limit: int,
                 overall_size_limit: int, client: BblfshClient, language: str,
                 random_state: int = 7, progress_tracker: Callable = lambda x: x,
-                log: Optional[logging.Logger] = None
-                ) -> Iterable[File]:
+                log: Optional[logging.Logger] = None) -> Iterable[File]:
     """
     Parse files with Babelfish.
 

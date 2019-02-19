@@ -201,8 +201,8 @@ def request_changes(stub: DataStub, ptr_from: ReferencePointer, ptr_to: Referenc
     return stub.GetChanges(request)
 
 
-def request_files(stub: DataStub, ptr: ReferencePointer, contents: bool, uast: bool
-                  ) -> Iterator[File]:
+def request_files(stub: DataStub, ptr: ReferencePointer, contents: bool, uast: bool) -> \
+        Iterator[File]:
     """
     Invoke GRPC API and get the files. Used by `with_uasts()` and Push events.
 
