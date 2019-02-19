@@ -2,7 +2,6 @@
 from collections import defaultdict
 from difflib import SequenceMatcher
 import logging
-from os.path import isfile
 import random
 import re
 from typing import Callable, Dict, Iterable, Iterator, List, Optional, Sequence
@@ -107,8 +106,6 @@ def filter_files_by_path(filepaths: Iterable[str], exclude_pattern: Optional[str
         exclude_pattern = GARBAGE_PATTERN
     exclude_compiled_pattern = re.compile(exclude_pattern) if exclude_pattern else None
     for filepath in filepaths:
-        if not isfile(filepath):
-            continue
         if exclude_compiled_pattern and exclude_compiled_pattern.search(filepath):
             continue
         yield filepath
@@ -157,9 +154,10 @@ def filter_files_by_overall_size(filepaths: Iterable[str], content_getter: calla
         yield key
 
 
-def parse_files(filepaths: Iterable[str], line_length_limit: int, overall_size_limit: int,
-                client: BblfshClient, language: str, random_state: int = 7,
-                progress_tracker: Callable = lambda x: x, log: Optional[logging.Logger] = None
+def parse_files(filepaths: Sequence[str], content_getter: callable, line_length_limit: int,
+                overall_size_limit: int, client: BblfshClient, language: str,
+                random_state: int = 7, progress_tracker: Callable = lambda x: x,
+                log: Optional[logging.Logger] = None
                 ) -> Iterable[File]:
     """
     Parse files with Babelfish.
@@ -170,6 +168,7 @@ def parse_files(filepaths: Iterable[str], line_length_limit: int, overall_size_l
     and hence different from `filepaths`.
 
     :param filepaths: File paths to filter.
+    :param content_getter: Function which returns the file byte content by it's path.
     :param line_length_limit: Maximum line length to accept a file.
     :param overall_size_limit: Maximum cumulative files size in bytes. \
                                The files are discarded after reaching this limit.
@@ -183,7 +182,7 @@ def parse_files(filepaths: Iterable[str], line_length_limit: int, overall_size_l
     random.seed(random_state)
     filepaths_filtered = list(filter_files_by_path(filepaths))
     files_filtered_by_line_length = sorted(
-        filter_files_by_line_length(filepaths_filtered, line_length_limit))
+        filter_files_by_line_length(filepaths_filtered, content_getter, line_length_limit))
     files_filtered_by_line_length = random.sample(files_filtered_by_line_length,
                                                   k=len(files_filtered_by_line_length))
     size, n_parsed = 0, 0
@@ -220,12 +219,12 @@ def parse_files(filepaths: Iterable[str], line_length_limit: int, overall_size_l
     return size_passed
 
 
-def filter_files(files: Dict[str, File], line_length_limit: int, overall_size_limit: int,
+def filter_files(files: Sequence[File], line_length_limit: int, overall_size_limit: int,
                  random_state: int = 7, log: Optional[logging.Logger] = None) -> List[File]:
     """
     Filter files based on their maximum line length and overall size.
 
-    :param files: files to filter.
+    :param files: files_by_path[key]les to filter.
     :param line_length_limit: maximum line length to accept a file.
     :param overall_size_limit: maximum cumulative files size in bytes. \
                                The files are discarded after reaching this limit.
@@ -236,7 +235,7 @@ def filter_files(files: Dict[str, File], line_length_limit: int, overall_size_li
     files_by_path = {f.path: f for f in files}
 
     def content_getter(key):
-        return files_by_path[key]
+        return files_by_path[key].content
 
     path_passed = list(filter_files_by_path([f.path for f in files]))
     if log is not None:
@@ -252,4 +251,4 @@ def filter_files(files: Dict[str, File], line_length_limit: int, overall_size_li
     if log is not None:
         log.debug("excluded %d/%d files by max overall size %d",
                   len(line_passed) - len(size_passed), len(line_passed), overall_size_limit)
-    return size_passed
+    return [files_by_path[filepath] for filepath in size_passed]
