@@ -74,7 +74,7 @@ BUILT_IN_PKGS = {
     "psycopg2-binary", "pyasn1", "pyasn1-modules", "pygtrie", "Pympler", "python-dateutil",
     "pytz", "PyYAML", "requests", "rsa", "scipy", "semantic-version", "setuptools", "six",
     "SQLAlchemy", "SQLAlchemy-Utils", "stringcase", "urllib3", "websocket-client", "wheel",
-    "requirements-parser", "xxhash"
+    "requirements-parser", "xxhash",
 }
 
 

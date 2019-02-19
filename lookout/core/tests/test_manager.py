@@ -48,8 +48,8 @@ class FakeAnalyzer(Analyzer):
         return [comment]
 
     @classmethod
-    def train(cls, ptr: ReferencePointer, config: dict, data_service: DataService, **data
-              ) -> AnalyzerModel:
+    def train(cls, ptr: ReferencePointer, config: dict, data_service: DataService, **data) \
+            -> AnalyzerModel:
         cls.service = data_service
         return FakeModel()
 
@@ -79,8 +79,8 @@ class FakeDummyAnalyzer(Analyzer):
         return []
 
     @classmethod
-    def train(cls, ptr: ReferencePointer, config: dict, data_service: DataService, **data
-              ) -> AnalyzerModel:
+    def train(cls, ptr: ReferencePointer, config: dict, data_service: DataService, **data) \
+            -> AnalyzerModel:
         cls.trained = True
         return DummyAnalyzerModel()
 
@@ -101,8 +101,8 @@ class FakeModelRepository(ModelRepository):
         self.get_calls = []
         self.set_calls = []
 
-    def get(self, model_id: str, model_type: Type[AnalyzerModel], url: str
-            ) -> Tuple[AnalyzerModel, bool]:
+    def get(self, model_id: str, model_type: Type[AnalyzerModel], url: str) -> \
+            Tuple[AnalyzerModel, bool]:
         self.get_calls.append((model_id, model_type, url))
         return FakeModel(), True
 
