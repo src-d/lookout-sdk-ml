@@ -1,4 +1,5 @@
 import os
+import random
 from tempfile import NamedTemporaryFile
 import unittest
 
@@ -122,8 +123,20 @@ class LibTests(unittest.TestCase):
             finally:
                 bblfsh_client._channel.close()
 
+    def text_filter_1000_files(self):
+        def create_files():
+            files = [File(path="one", content=b"hello"),
+                     File(path="two", content=b"world" * 100)] * 1000
+            files = random.sample(files, k=len(files))  # note: no need to set the seed
+            return {file.path: file for file in files}
+
+        files1 = filter_files(create_files(), line_length_limit=80, overall_size_limit=5 << 20)
+        files2 = filter_files(create_files(), line_length_limit=80, overall_size_limit=5 << 20)
+        self.assertEqual(files1, files2)
+
     def test_filter_files(self):
         files = [File(path="one", content=b"hello"), File(path="two", content=b"world" * 100)]
+        files = {file.path: file for file in files}
         logged = False
 
         class Log:

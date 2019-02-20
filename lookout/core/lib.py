@@ -218,7 +218,7 @@ def parse_files(filepaths: Sequence[str], content_getter: callable, line_length_
     return size_passed
 
 
-def filter_files(files: Sequence[File], line_length_limit: int, overall_size_limit: int,
+def filter_files(files: Dict[str, File], line_length_limit: int, overall_size_limit: int,
                  random_state: int = 7, log: Optional[logging.Logger] = None) -> List[File]:
     """
     Filter files based on their maximum line length and overall size.
@@ -231,12 +231,10 @@ def filter_files(files: Sequence[File], line_length_limit: int, overall_size_lim
     :param log: logger to use to report the number of excluded files.
     :return: files passed through the filter and the number of files which were excluded.
     """
-    files_by_path = {f.path: f for f in files}
-
     def content_getter(key):
-        return files_by_path[key].content
+        return files[key].content
 
-    path_passed = list(filter_files_by_path([f.path for f in files]))
+    path_passed = list(filter_files_by_path(files))
     if log is not None:
         log.debug("excluded %d/%d files by path", len(files) - len(path_passed), len(files))
     line_passed = list(
@@ -250,4 +248,4 @@ def filter_files(files: Sequence[File], line_length_limit: int, overall_size_lim
     if log is not None:
         log.debug("excluded %d/%d files by max overall size %d",
                   len(line_passed) - len(size_passed), len(line_passed), overall_size_limit)
-    return [files_by_path[filepath] for filepath in size_passed]
+    return [files[filepath] for filepath in size_passed]
