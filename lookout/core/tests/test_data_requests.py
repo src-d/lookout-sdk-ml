@@ -9,9 +9,9 @@ import lookout.core
 from lookout.core.analyzer import ReferencePointer
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import EventResponse
-from lookout.core.data_requests import (DataService, parse_uast,
-                                        with_changed_uasts, with_changed_uasts_and_contents,
-                                        with_uasts, with_uasts_and_contents)
+from lookout.core.data_requests import (
+    DataService, parse_uast, with_changed_contents, with_changed_uasts,
+    with_changed_uasts_and_contents, with_contents, with_uasts, with_uasts_and_contents)
 from lookout.core.event_listener import EventHandlers, EventListener
 from lookout.core.test_helpers import server
 import lookout.core.tests
@@ -83,6 +83,28 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              self.data_service)
 
+    def test_with_changed_contents(self):
+        def func(imposter, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
+                 data_service: DataService, **data):
+            self.assertIsInstance(data_service, DataService)
+            changes = list(data["changes"])
+            self.assertEqual(len(changes), 1)
+            change = changes[0]
+            self.assertEqual(len(change.base.content), 5548)
+            self.assertEqual(len(change.head.content), 5542)
+            self.assertFalse(change.base.uast.children)
+            self.assertFalse(change.head.uast.children)
+            self.assertEqual(change.base.path, change.head.path)
+            self.assertEqual(change.base.path, "lookout/core/manager.py")
+            self.assertEqual(change.base.language, "")
+            self.assertEqual(change.head.language, "")
+
+        func = with_changed_contents(func)
+        func(self,
+             ReferencePointer(self.url, self.ref, self.COMMIT_FROM),
+             ReferencePointer(self.url, self.ref, self.COMMIT_TO),
+             self.data_service)
+
     def test_with_changed_uasts_and_contents(self):
         def func(imposter, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                  data_service: DataService, **data):
@@ -119,6 +141,30 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
                                               "Jupyter Notebook", "Shell", "Text", ""))
 
         func = with_uasts(func)
+        func(self,
+             ReferencePointer(self.url, self.ref, self.COMMIT_TO),
+             None,
+             self.data_service)
+
+    def test_with_contents(self):
+        def func(imposter, ptr: ReferencePointer, config: dict,
+                 data_service: DataService, **data):
+            self.assertIsInstance(data_service, DataService)
+            files = list(data["files"])
+            self.assertEqual(len(files), 18)
+            non_empty_langs = 0
+            for file in files:
+                if not file.path.endswith("__init__.py"):
+                    self.assertGreater(len(file.content), 0, file.path)
+                self.assertFalse(file.uast.children)
+                self.assertTrue(file.path)
+                if file.language:
+                    non_empty_langs += 1
+                self.assertIn(file.language, ("Python", "YAML", "Dockerfile", "Markdown",
+                                              "Jupyter Notebook", "Shell", "Text", ""))
+            self.assertEqual(non_empty_langs, 0)
+
+        func = with_contents(func)
         func(self,
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              None,

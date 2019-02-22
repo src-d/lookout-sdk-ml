@@ -123,6 +123,28 @@ def with_changed_uasts(func):  # noqa: D401
     return wrapped_with_changed_uasts
 
 
+def with_changed_contents(func):  # noqa: D401
+    """
+    Decorator to provide "changes" keyword argument to `**data` in `Analyzer.analyze()`.
+
+    "changes" contain the list of `Change` - see lookout/core/server/sdk/service_data.proto.
+    The changes will have only raw file contents, no UASTs. Language is not set.
+
+    :param func: Method with the signature compatible with `Analyzer.analyze()`.
+    :return: The decorated method.
+    """
+    @functools.wraps(func)
+    @_handle_rpc_errors
+    def wrapped_with_changed_contents(
+            self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
+            data_service: DataService, **data) -> [Comment]:
+        changes = request_changes(
+            data_service.get_data(), ptr_from, ptr_to, contents=True, uast=False)
+        return func(self, ptr_from, ptr_to, data_service, changes=changes, **data)
+
+    return wrapped_with_changed_contents
+
+
 def with_changed_uasts_and_contents(func):  # noqa: D401
     """
     Decorator to provide "changes" keyword argument to `**data` in `Analyzer.analyze()`.
@@ -147,9 +169,10 @@ def with_changed_uasts_and_contents(func):  # noqa: D401
 
 def with_uasts(func):  # noqa: D401
     """
-    Decorator to provide "files" keyword argument to `**data` in `Analyzer.train()`.
+    Decorator to provide "files" keyword argument to `**data` in `Analyzer.train()`. They \
+    only contain the UASTs.
 
-    "files" are the list of `File`-s with all the UASTs for the passed Git repository URL and
+    "files" are the list of `File`-s with all the data for the passed Git repository URL and
     revision, see lookout/core/server/sdk/service_data.proto.
 
     :param func: Method with the signature compatible with `Analyzer.train()`.
@@ -165,9 +188,31 @@ def with_uasts(func):  # noqa: D401
     return wrapped_with_uasts
 
 
+def with_contents(func):  # noqa: D401
+    """
+    Decorator to provide "files" keyword argument to `**data` in `Analyzer.train()`. They \
+    only contain the raw file contents. Language is not set.
+
+    "files" are the list of `File`-s with all the data for the passed Git repository URL and
+    revision, see lookout/core/server/sdk/service_data.proto.
+
+    :param func: Method with the signature compatible with `Analyzer.train()`.
+    :return: The decorated method.
+    """
+    @functools.wraps(func)
+    @_handle_rpc_errors
+    def wrapped_with_contents(cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
+                              data_service: DataService, **data) -> AnalyzerModel:
+        files = request_files(data_service.get_data(), ptr, contents=True, uast=False)
+        return func(cls, ptr, config, data_service, files=files, **data)
+
+    return wrapped_with_contents
+
+
 def with_uasts_and_contents(func):  # noqa: D401
     """
-    Decorator to provide "files" keyword argument to `**data` in `Analyzer.train()`.
+    Decorator to provide "files" keyword argument to `**data` in `Analyzer.train()`. They \
+    contain both the raw file contents and the UASTs.
 
     "files" are the list of `File`-s with all the UASTs and raw file contents for the passed Git
     repository URL and revision, see lookout/core/server/sdk/service_data.proto.
