@@ -96,8 +96,8 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
             self.assertFalse(change.head.uast.children)
             self.assertEqual(change.base.path, change.head.path)
             self.assertEqual(change.base.path, "lookout/core/manager.py")
-            self.assertEqual(change.base.language, "")
-            self.assertEqual(change.head.language, "")
+            self.assertEqual(change.base.language, "Python")
+            self.assertEqual(change.head.language, "Python")
 
         func = with_changed_contents(func)
         func(self,
@@ -162,7 +162,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
                     non_empty_langs += 1
                 self.assertIn(file.language, ("Python", "YAML", "Dockerfile", "Markdown",
                                               "Jupyter Notebook", "Shell", "Text", ""))
-            self.assertEqual(non_empty_langs, 0)
+            self.assertGreater(non_empty_langs, 0)
 
         func = with_contents(func)
         func(self,

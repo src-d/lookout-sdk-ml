@@ -128,7 +128,7 @@ def with_changed_contents(func):  # noqa: D401
     Decorator to provide "changes" keyword argument to `**data` in `Analyzer.analyze()`.
 
     "changes" contain the list of `Change` - see lookout/core/server/sdk/service_data.proto.
-    The changes will have only raw file contents, no UASTs. Language is not set.
+    The changes will have only raw file contents, no UASTs.
 
     :param func: Method with the signature compatible with `Analyzer.analyze()`.
     :return: The decorated method.
@@ -191,7 +191,7 @@ def with_uasts(func):  # noqa: D401
 def with_contents(func):  # noqa: D401
     """
     Decorator to provide "files" keyword argument to `**data` in `Analyzer.train()`. They \
-    only contain the raw file contents. Language is not set.
+    only contain the raw file contents.
 
     "files" are the list of `File`-s with all the data for the passed Git repository URL and
     revision, see lookout/core/server/sdk/service_data.proto.
@@ -242,6 +242,7 @@ def request_changes(stub: DataStub, ptr_from: ReferencePointer, ptr_to: Referenc
     request.exclude_pattern = GARBAGE_PATTERN
     request.exclude_vendored = True
     request.want_contents = contents
+    request.want_language = contents or uast
     request.want_uast = uast
     return stub.GetChanges(request)
 
@@ -257,6 +258,7 @@ def request_files(stub: DataStub, ptr: ReferencePointer, contents: bool, uast: b
     request.exclude_pattern = GARBAGE_PATTERN
     request.exclude_vendored = True
     request.want_contents = contents
+    request.want_language = contents or uast
     request.want_uast = uast
     return stub.GetFiles(request)
 
