@@ -170,6 +170,7 @@ def create_parser() -> configargparse.ArgParser:
         "/etc/lookout/analyzer.conf", "~/.config/lookout/analyzer.conf"],
         formatter_class=ArgumentDefaultsHelpFormatterNoNone,
         auto_env_var_prefix="lookout_")
+    slogging.add_logging_args(parser)
     subparsers = parser.add_subparsers(help="Commands", dest="command")
 
     def add_parser(name, help):
@@ -182,7 +183,6 @@ def create_parser() -> configargparse.ArgParser:
     run_parser = add_parser(
         "run", "Launch a new service with the specified (one or more) analyzers.")
     run_parser.set_defaults(handler=run_analyzers)
-    slogging.add_logging_args(run_parser)
     add_analyzer_arg(run_parser)
     run_parser.add("-c", "--config", is_config_file=True,
                    help="Path to the configuration file with option defaults.")
@@ -197,7 +197,6 @@ def create_parser() -> configargparse.ArgParser:
     init_parser = add_parser("init", "Initialize the model repository.")
     init_parser.set_defaults(handler=init_repo)
     add_model_repository_args(init_parser)
-    slogging.add_logging_args(init_parser)
 
     tool_parser = add_parser("tool", "Invoke the tooling of a given analyzer.")
     tool_parser.set_defaults(handler=run_analyzer_tool)
@@ -209,7 +208,6 @@ def create_parser() -> configargparse.ArgParser:
         "Package several analyzers to a Docker container and write a sample Docker Compose config "
         "for Lookout.")
     package_parser.set_defaults(handler=package_cmdline_entry)
-    slogging.add_logging_args(package_parser)
     add_analyzer_arg(package_parser)
     package_parser.add("-w", "--workdir", help="Generate files in this directory.",
                        required=True)
