@@ -1,5 +1,5 @@
 """Various utilities for analyzers to work with UASTs and plain texts."""
-from collections import defaultdict
+from collections import OrderedDict
 from difflib import SequenceMatcher
 import logging
 import random
@@ -82,11 +82,14 @@ def files_by_language(files: Iterable[File]) -> Dict[str, Dict[str, File]]:
     :param files: Iterable of `File`-s.
     :return: Dictionary with languages as keys and files mapped to paths as values.
     """
-    result = defaultdict(dict)
-    for file in files:
+    result = OrderedDict()
+    for file in sorted(files, key=lambda x: x.path):
         if not len(file.uast.children):
             continue
-        result[file.language.lower()][file.path] = file
+        lang = file.language.lower()
+        if lang not in result:
+            result[lang] = OrderedDict()
+        result[lang][file.path] = file
     return result
 
 
