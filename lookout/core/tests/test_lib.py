@@ -80,13 +80,15 @@ class LibTests(unittest.TestCase):
         self.assertEqual(new_line_indices, [3, 4, 6])
 
     def test_files_by_language(self):
-        file_stats = {"js": 2, "Python": 5, "ruby": 7}
+        file_stats = {"js": 2, "ruby": 7, "Python": 5}
         files = []
         for language, n_files in file_stats.items():
             for i in range(n_files):
-                files.append(File(language=language, uast=Node(children=[Node()]), path=str(i)))
+                files.append(File(language=language, uast=Node(children=[Node()]),
+                                  path=language + str(i)))
         result = files_by_language(files)
-        self.assertEqual({"js": 2, "python": 5, "ruby": 7}, {k: len(v) for k, v in result.items()})
+        self.assertEqual([("python", 5), ("js", 2), ("ruby", 7)],
+                         [(k, len(v)) for k, v in result.items()])
         return result
 
     def test_files_by_line_length(self):

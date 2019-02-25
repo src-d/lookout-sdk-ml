@@ -1,5 +1,5 @@
 """Various utilities for analyzers to work with UASTs and plain texts."""
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 from difflib import SequenceMatcher
 import logging
 import random
