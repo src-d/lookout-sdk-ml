@@ -157,7 +157,7 @@ def filter_files_by_overall_size(filepaths: Iterable[str], content_getter: calla
         yield key
 
 
-def parse_files(filepaths: Sequence[str], content_getter: callable, line_length_limit: int,
+def parse_files(filepaths: Sequence[str], line_length_limit: int,
                 overall_size_limit: int, client: BblfshClient, language: str,
                 random_state: int = 7, progress_tracker: Callable = lambda x: x,
                 log: Optional[logging.Logger] = None) -> Iterable[File]:
@@ -170,7 +170,6 @@ def parse_files(filepaths: Sequence[str], content_getter: callable, line_length_
     and hence different from `filepaths`.
 
     :param filepaths: File paths to filter.
-    :param content_getter: Function which returns the file byte content by it's path.
     :param line_length_limit: Maximum line length to accept a file.
     :param overall_size_limit: Maximum cumulative files size in bytes. \
                                The files are discarded after reaching this limit.
@@ -181,10 +180,14 @@ def parse_files(filepaths: Sequence[str], content_getter: callable, line_length_
     :param log: Logger to use to report the number of excluded files.
     :return: `File`-s with parsed UASTs and which passed through the filters.
     """
+    def load_file(path):
+        with open(path, "rb") as f:
+            return f.read()
+
     random.seed(random_state)
     filepaths_filtered = list(filter_files_by_path(filepaths))
     files_filtered_by_line_length = sorted(
-        filter_files_by_line_length(filepaths_filtered, content_getter, line_length_limit))
+        filter_files_by_line_length(filepaths_filtered, load_file, line_length_limit))
     files_filtered_by_line_length = random.sample(files_filtered_by_line_length,
                                                   k=len(files_filtered_by_line_length))
     size, n_parsed = 0, 0
