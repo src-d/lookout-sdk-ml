@@ -3,7 +3,7 @@
 Lookout Python SDK for stateful analyzers, typically using Machine Learning.
 
 [![Read the Docs](https://img.shields.io/readthedocs/lookout-sdk-ml.svg)](https://readthedocs.org/projects/lookout-sdk-ml/)
-[![Travis build status](https://travis-ci.org/src-d/lookout-sdk-ml.svg?branch=master)](https://travis-ci.org/src-d/lookout-sdk-ml)
+[![Travis build status](https://travis-ci.com/src-d/lookout-sdk-ml.svg?branch=master)](https://travis-ci.com/src-d/lookout-sdk-ml)
 [![Code coverage](https://codecov.io/github/src-d/lookout-sdk-ml/coverage.svg)](https://codecov.io/github/src-d/lookout-sdk-ml)
 [![Docker build status](https://img.shields.io/docker/build/srcd/lookout-sdk-ml.svg)](https://hub.docker.com/r/srcd/lookout-sdk-ml)
 [![PyPi package status](https://img.shields.io/pypi/v/lookout-sdk-ml.svg)](https://pypi.python.org/pypi/lookout-sdk-ml)
