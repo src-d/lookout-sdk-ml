@@ -11,11 +11,6 @@ from lookout.core.lib import extract_changed_nodes, files_by_language, filter_fi
     find_new_lines, parse_files
 
 
-def load_file(path):
-    with open(path, "rb") as f:
-        return f.read()
-
-
 class LibTests(unittest.TestCase):
     def test_find_deleted_lines(self):
         text_base = """
@@ -116,7 +111,7 @@ class LibTests(unittest.TestCase):
             tmp2.seek(0)
             try:
                 bblfsh_client = BblfshClient("0.0.0.0:9432")
-                filtered = parse_files(filepaths=[tmp1.name, tmp2.name], content_getter=load_file,
+                filtered = parse_files(filepaths=[tmp1.name, tmp2.name],
                                        line_length_limit=80, overall_size_limit=5 << 20,
                                        client=bblfsh_client, language="javascript", log=Log())
                 self.assertEqual(len(filtered), 1)
