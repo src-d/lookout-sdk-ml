@@ -13,7 +13,7 @@ from lookout.core.data_requests import (
     DataService, parse_uast, with_changed_contents, with_changed_uasts,
     with_changed_uasts_and_contents, with_contents, with_uasts, with_uasts_and_contents)
 from lookout.core.event_listener import EventHandlers, EventListener
-from lookout.core.test_helpers import server
+from lookout.core.helpers.server import find_port, LookoutSDK
 import lookout.core.tests
 
 
@@ -24,7 +24,8 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
     def setUp(self):
         self.setUpEvent = threading.Event()
         self.tearDownEvent = threading.Event()
-        self.port = server.find_port()
+        self.port = find_port()
+        self.lookout_sdk = LookoutSDK()
         self.listener = EventListener("localhost:%d" % self.port, self).start()
         self.server_thread = threading.Thread(target=self.run_data_service)
         self.server_thread.start()
@@ -54,8 +55,8 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
 
     def run_data_service(self):
         try:
-            server.run("push", self.COMMIT_FROM, self.COMMIT_TO, self.port,
-                       git_dir=os.getenv("LOOKOUT_SDK_ML_TESTS_GIT_DIR", "."))
+            self.lookout_sdk.push(self.COMMIT_FROM, self.COMMIT_TO, self.port,
+                                  git_dir=os.getenv("LOOKOUT_SDK_ML_TESTS_GIT_DIR", "."))
         except Exception as e:
             print(type(e).__name__, e)
             self.setUpWasSuccessful = False

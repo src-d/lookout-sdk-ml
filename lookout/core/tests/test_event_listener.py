@@ -4,7 +4,7 @@ import unittest
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import EventResponse
 from lookout.core.event_listener import EventHandlers, EventListener
-from lookout.core.test_helpers import server
+from lookout.core.helpers.server import find_port, LookoutSDK
 
 
 class Handlers(EventHandlers):
@@ -26,19 +26,22 @@ class EventListenerTests(unittest.TestCase):
 
     def setUp(self):
         self.handlers = Handlers()
-        self.port = server.find_port()
+        self.port = find_port()
+        self.lookout_sdk = LookoutSDK()
 
     def test_review(self):
-        listener = EventListener("localhost:%d" % self.port, self.handlers).start()
-        server.run("review", self.COMMIT_FROM, self.COMMIT_TO, self.port,
-                   git_dir=os.getenv("LOOKOUT_SDK_ML_TESTS_GIT_DIR", "."))
+        listener = EventListener("localhost:%d" % self.port,
+                                 self.handlers).start()
+        self.lookout_sdk.review(self.COMMIT_FROM, self.COMMIT_TO, self.port,
+                                git_dir=os.getenv("LOOKOUT_SDK_ML_TESTS_GIT_DIR", "."))
         self.assertIsInstance(self.handlers.request, ReviewEvent)
         del listener
 
     def test_push(self):
-        listener = EventListener("localhost:%d" % self.port, self.handlers).start()
-        server.run("push", self.COMMIT_FROM, self.COMMIT_TO, self.port,
-                   git_dir=os.getenv("LOOKOUT_SDK_ML_TESTS_GIT_DIR", "."))
+        listener = EventListener("localhost:%d" % self.port,
+                                 self.handlers).start()
+        self.lookout_sdk.push(self.COMMIT_FROM, self.COMMIT_TO, self.port,
+                              git_dir=os.getenv("LOOKOUT_SDK_ML_TESTS_GIT_DIR", "."))
         self.assertIsInstance(self.handlers.request, PushEvent)
         del listener
 
