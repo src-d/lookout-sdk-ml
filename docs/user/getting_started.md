@@ -253,7 +253,7 @@ to use for your assisted code review tests. Create a sample pull request in that
 repository. Then execute:
 
 ```
-analyzer package my_analyzer -u your_user -t your_token -r your/repo -w /tmp/pkg -y
+analyzer package my_analyzer -u your_user -t your_token -r your/repo -y
 ```
 
 You should eventually see the comments to your PR on GitHub authored by your user.
