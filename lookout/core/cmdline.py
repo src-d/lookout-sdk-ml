@@ -5,6 +5,7 @@ import logging
 import os
 import pkgutil
 import sys  # noqa: F401
+import tempfile
 from unittest.mock import patch
 
 import configargparse
@@ -210,7 +211,7 @@ def create_parser() -> configargparse.ArgParser:
     package_parser.set_defaults(handler=package_cmdline_entry)
     add_analyzer_arg(package_parser)
     package_parser.add("-w", "--workdir", help="Generate files in this directory.",
-                       required=True)
+                       default=tempfile.mkdtemp(prefix="lookout_package_"))
     package_parser.add("--requirements", help="Path to a custom requirements.txt")
     package_parser.add("-r", "--repo", help="GitHub repository name to watch. "
                                             "Example: \"src-d/lookout\".",
