@@ -12,6 +12,7 @@ from modelforge.environment import collect_loaded_packages
 import requirements
 import stringcase
 
+from lookout.core import __version__ as lookout_sdk_ml_version
 from lookout.core import slogging
 
 
@@ -153,7 +154,8 @@ def _generate_configs(analyzers: str, ndeps: str, ndeps_dev: str, package_name: 
     template = loader.load(jenv, "Dockerfile.jinja2")
     with open(os.path.join(wd, "Dockerfile"), "w") as fout:
         fout.write(template.render(analyzers=analyzers, package_name=package_name,
-                                   pkg=ndeps, pkg_dev=ndeps_dev))
+                                   pkg=ndeps, pkg_dev=ndeps_dev,
+                                   lookout_sdk_ml_version=lookout_sdk_ml_version))
     copy("analyzers.yml")
     log.info("Generating lookout.yml")
     template = loader.load(jenv, "lookout.yml.jinja2")

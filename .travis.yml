@@ -16,7 +16,6 @@ stages:
 _install: &_install
   - export LOOKOUT_SDK_ML_TESTS_GIT_DIR=$(pwd)
   - version=$(python3 setup.py --version)
-  - grep srcd/lookout-sdk-ml:$version lookout/core/container/Dockerfile.jinja2
   - docker build -t srcd/lookout-sdk-ml:$version .
   - pip install --upgrade pip cython codecov
   - LOOKOUT_SDK_ML_SETUP_INCLUDE_TESTS=1 pip install .[test]
