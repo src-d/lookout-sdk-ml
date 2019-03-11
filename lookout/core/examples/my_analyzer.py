@@ -28,7 +28,7 @@ class MyAnalyzer(Analyzer):  # noqa: D
     description = "Tries to fix misspelled identifiers."
     _log = logging.getLogger("ExamplesAnalyzer")
 
-    @with_changed_uasts_and_contents
+    @with_changed_uasts_and_contents(unicode=False)
     def analyze(self, ptr_from: ReferencePointer, ptr_to: ReferencePointer,  # noqa: D
                 data_service: DataService, changes: Iterable[Change]) -> [Comment]:
         self._log.info("analyze %s %s", ptr_from.commit, ptr_to.commit)
@@ -45,7 +45,7 @@ class MyAnalyzer(Analyzer):  # noqa: D
         return comments
 
     @classmethod
-    @with_uasts_and_contents
+    @with_uasts_and_contents(unicode=False)
     def train(cls, ptr: ReferencePointer, config: Dict[str, Any], data_service: DataService,  # noqa: D
               files: Iterable[File]) -> AnalyzerModel:
         cls._log.info("train %s %s", ptr.url, ptr.commit)

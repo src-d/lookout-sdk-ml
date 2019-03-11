@@ -51,7 +51,9 @@ setup(
     },
     tests_require=tests_require,
     package_data={"": ["../license.md", "README.md", "../requirements.txt"],
-                  "lookout.core": ["container/*", "examples/*.py"]},
+                  "lookout.core": ["container/*", "examples/*.py"],
+                  "lookout.core.tests": ["*.xz"],
+                  },
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",

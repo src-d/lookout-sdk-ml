@@ -6,7 +6,7 @@ import unittest
 import bblfsh
 
 import lookout.core
-from lookout.core.analyzer import ReferencePointer
+from lookout.core.analyzer import ReferencePointer, UnicodeFile
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import EventResponse
 from lookout.core.data_requests import (
@@ -16,6 +16,7 @@ from lookout.core.data_requests import (
 from lookout.core.event_listener import EventHandlers, EventListener
 from lookout.core.helpers.server import find_port, LookoutSDK
 import lookout.core.tests
+from lookout.core.tests.test_bytes_to_unicode_converter import check_uast_transformation
 
 
 class DataRequestsTests(unittest.TestCase, EventHandlers):
@@ -79,7 +80,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
             self.assertEqual(change.base.language, "Python")
             self.assertEqual(change.head.language, "Python")
 
-        func = with_changed_uasts(func)
+        func = with_changed_uasts(unicode=False)(func)
         func(self,
              ReferencePointer(self.url, self.ref, self.COMMIT_FROM),
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
@@ -101,7 +102,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
             self.assertEqual(change.base.language, "Python")
             self.assertEqual(change.head.language, "Python")
 
-        func = with_changed_contents(func)
+        func = with_changed_contents(unicode=False)(func)
         func(self,
              ReferencePointer(self.url, self.ref, self.COMMIT_FROM),
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
@@ -123,7 +124,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
             self.assertEqual(change.base.language, "Python")
             self.assertEqual(change.head.language, "Python")
 
-        func = with_changed_uasts_and_contents(func)
+        func = with_changed_uasts_and_contents(unicode=False)(func)
         func(self,
              ReferencePointer(self.url, self.ref, self.COMMIT_FROM),
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
@@ -142,7 +143,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
                 self.assertIn(file.language, ("Python", "YAML", "Dockerfile", "Markdown",
                                               "Jupyter Notebook", "Shell", "Text", ""))
 
-        func = with_uasts(func)
+        func = with_uasts(unicode=False)(func)
         func(self,
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              None,
@@ -166,7 +167,7 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
                                               "Jupyter Notebook", "Shell", "Text", ""))
             self.assertGreater(non_empty_langs, 0)
 
-        func = with_contents(func)
+        func = with_contents(unicode=False)(func)
         func(self,
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              None,
@@ -186,14 +187,15 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
                 self.assertIn(file.language, ("Python", "YAML", "Dockerfile", "Markdown",
                                               "Jupyter Notebook", "Shell", "Text", ""))
 
-        func = with_uasts_and_contents(func)
+        func = with_uasts_and_contents(unicode=False)(func)
         func(self,
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              None,
              self.data_service)
 
     def test_babelfish(self):
-        uast, errors = parse_uast(self.data_service.get_bblfsh(), "console.log('hi');", "hi.js")
+        uast, errors = parse_uast(self.data_service.get_bblfsh(), "console.log('hi');", "hi.js",
+                                  unicode=False)
         self.assertIsInstance(uast, bblfsh.Node)
         self.assertEqual(len(errors), 0, str(errors))
 
@@ -207,6 +209,60 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
             self.data_service.check_bblfsh_driver_versions,
             ["javascript<1.0"])
         self.data_service.check_bblfsh_driver_versions(["javascript>=1.3.0,<10.0"])
+
+    def test_with_changed_uasts_unicode(self):
+        def func(imposter, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
+                 data_service: DataService, **data):
+            self.assertIsInstance(data_service, DataService)
+            changes = list(data["changes"])
+            self.assertEqual(len(changes), 1)
+            change = changes[0]
+            self.assertEqual(change.base.content, "")
+            self.assertEqual(change.head.content, "")
+            self.assertEqual(type(change.base.uast).__module__, bblfsh.Node.__module__)
+            self.assertEqual(type(change.head.uast).__module__, bblfsh.Node.__module__)
+            self.assertEqual(change.base.path, change.head.path)
+            self.assertEqual(change.base.path, "lookout/core/manager.py")
+            self.assertEqual(change.base.language, "Python")
+            self.assertEqual(change.head.language, "Python")
+
+        func = with_changed_uasts(unicode=True)(func)
+        func(self,
+             ReferencePointer(self.url, self.ref, self.COMMIT_FROM),
+             ReferencePointer(self.url, self.ref, self.COMMIT_TO),
+             self.data_service)
+
+    def test_with_uasts_unicode(self):
+        def func(imposter, ptr: ReferencePointer, config: dict,
+                 data_service: DataService, **data):
+            self.assertIsInstance(data_service, DataService)
+            files = list(data["files"])
+            self.assertEqual(len(files), 18)
+            for file in files:
+                self.assertIsInstance(file, UnicodeFile)
+                self.assertEqual(file.content, "")
+                self.assertEqual(type(file.uast).__module__, bblfsh.Node.__module__)
+                self.assertTrue(file.path)
+                self.assertIn(file.language, ("Python", "YAML", "Dockerfile", "Markdown",
+                                              "Jupyter Notebook", "Shell", "Text", ""))
+
+        func = with_uasts(unicode=True)(func)
+        func(self,
+             ReferencePointer(self.url, self.ref, self.COMMIT_TO),
+             None,
+             self.data_service)
+
+    def test_babelfish_unicode(self):
+        content = b"console.log('\xc3\x80');"
+
+        uast_uni, errors_uni = parse_uast(self.data_service.get_bblfsh(), content.decode(),
+                                          "test.js", unicode=True)
+        uast, errors = parse_uast(self.data_service.get_bblfsh(), content.decode(), "test.js",
+                                  unicode=False)
+        self.assertIsInstance(uast, bblfsh.Node)
+        self.assertIsInstance(uast_uni, bblfsh.Node)
+        self.assertEqual(errors_uni, errors)
+        check_uast_transformation(self, content, uast, uast_uni)
 
 
 if __name__ == "__main__":

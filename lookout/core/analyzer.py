@@ -32,6 +32,25 @@ class ReferencePointer(NamedTuple("ReferencePointer", (("url", str),
                                    hash=self.commit)
 
 
+UnicodeFile = NamedTuple("UnicodeFile", (
+    ("content", str), ("uast", "bblfsh.Node"), ("path", str), ("language", str)))
+UnicodeFile.__doc__ = """
+UnicodeFile is an alternative to `lookout.core.api.service_data_pb2.File`.
+It is used in case `@with_unicode_data_service` decorator is applied.
+The main difference is that `content` field is a Unicode string and the node offsets are changed to
+corresponding unicode string offsets.
+""".strip()
+
+
+UnicodeChange = NamedTuple("UnicodeChange", (("base", UnicodeFile), ("head", UnicodeFile)))
+UnicodeChange.__doc__ = """
+UnicodeFile is an alternative to `lookout.core.api.service_data_pb2.Change`.
+It is used in case `@with_unicode_data_service` decorator is applied.
+The main difference is that `base` and `head` fields have type `UnicodeFile`.
+For more info refer to the documentation about `UnicodeFile`.
+""".strip()
+
+
 class AnalyzerModel(Model):
     """
     All models used in `Analyzer`-s must derive from this base class.
