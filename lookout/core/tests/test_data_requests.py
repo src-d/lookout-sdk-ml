@@ -10,8 +10,9 @@ from lookout.core.analyzer import ReferencePointer
 from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import EventResponse
 from lookout.core.data_requests import (
-    DataService, parse_uast, with_changed_contents, with_changed_uasts,
-    with_changed_uasts_and_contents, with_contents, with_uasts, with_uasts_and_contents)
+    DataService, parse_uast, UnsatisfiedDriverVersionError, with_changed_contents,
+    with_changed_uasts, with_changed_uasts_and_contents, with_contents, with_uasts,
+    with_uasts_and_contents)
 from lookout.core.event_listener import EventHandlers, EventListener
 from lookout.core.helpers.server import find_port, LookoutSDK
 import lookout.core.tests
@@ -195,6 +196,17 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
         uast, errors = parse_uast(self.data_service.get_bblfsh(), "console.log('hi');", "hi.js")
         self.assertIsInstance(uast, bblfsh.Node)
         self.assertEqual(len(errors), 0, str(errors))
+
+    def test_check_bblfsh_driver_versions(self):
+        self.assertRaises(
+            UnsatisfiedDriverVersionError,
+            self.data_service.check_bblfsh_driver_versions,
+            ["brainfuck>=1.0"])
+        self.assertRaises(
+            UnsatisfiedDriverVersionError,
+            self.data_service.check_bblfsh_driver_versions,
+            ["javascript<1.0"])
+        self.data_service.check_bblfsh_driver_versions(["javascript>=1.3.0,<10.0"])
 
 
 if __name__ == "__main__":
