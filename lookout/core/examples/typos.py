@@ -6,9 +6,9 @@ import autocorrect
 import bblfsh
 from sourced.ml.algorithms import TokenParser, UastIds2Bag
 
-from lookout.core.analyzer import Analyzer, AnalyzerModel, ReferencePointer
+from lookout.core.analyzer import Analyzer, AnalyzerModel, ReferencePointer, UnicodeChange, \
+    UnicodeFile
 from lookout.core.api.service_analyzer_pb2 import Comment
-from lookout.core.api.service_data_pb2 import Change, File
 from lookout.core.data_requests import DataService, \
     with_changed_uasts_and_contents, with_uasts_and_contents
 from lookout.core.lib import find_new_lines
@@ -37,9 +37,9 @@ class TyposAnalyzer(Analyzer):  # noqa: D
     description = "Reports the changes in UAST node counts."
     _log = logging.getLogger("TyposAnalyzer")
 
-    @with_changed_uasts_and_contents
+    @with_changed_uasts_and_contents(unicode=True)
     def analyze(self, ptr_from: ReferencePointer, ptr_to: ReferencePointer,  # noqa: D
-                data_service: DataService, changes: Iterable[Change]) -> [Comment]:
+                data_service: DataService, changes: Iterable[UnicodeChange]) -> [Comment]:
         self._log.info("analyze %s %s", ptr_from.commit, ptr_to.commit)
         comments = []
         parser = TokenParser(stem_threshold=100, single_shot=True)
@@ -50,7 +50,8 @@ class TyposAnalyzer(Analyzer):  # noqa: D
                     autocorrect.word.KNOWN_WORDS.add(name)
             for change in changes:
                 suggestions = defaultdict(list)
-                new_lines = set(find_new_lines(change.base, change.head))
+                new_lines = set(find_new_lines(change.base.content,
+                                               change.head.content))
                 for node in bblfsh.filter(change.head.uast, "//*[@roleIdentifier]"):
                     if node.start_position is not None and node.start_position.line in new_lines:
                         for part in parser.split(node.token):
@@ -71,9 +72,9 @@ class TyposAnalyzer(Analyzer):  # noqa: D
         return comments
 
     @classmethod
-    @with_uasts_and_contents
+    @with_uasts_and_contents(unicode=False)
     def train(cls, ptr: ReferencePointer, config: Dict[str, Any], data_service: DataService,  # noqa: D
-              files: Iterable[File]) -> AnalyzerModel:
+              files: Iterable[UnicodeFile]) -> AnalyzerModel:
         cls._log.info("train %s %s", ptr.url, ptr.commit)
         model = cls.construct_model(ptr)
         uast2ids = UastIds2Bag(token_parser=TokenParser(stem_threshold=100))

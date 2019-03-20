@@ -70,8 +70,7 @@ class LibTests(unittest.TestCase):
         Nam consectetur enim eget elementum mattis.
         Ut condimentum metus vehicula tellus tempus, vel ultricies lectus dapibus.
         Etiam vitae nisi at ante pretium lacinia et eu massa."""
-        new_line_indices = find_new_lines(File(content=bytes(text_base, "utf-8")),
-                                          File(content=bytes(text_head, "utf-8")))
+        new_line_indices = find_new_lines(text_base, text_head)
         self.assertEqual(new_line_indices, [3, 4, 6])
 
     def test_files_by_language(self):
