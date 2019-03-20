@@ -82,15 +82,17 @@ class BytesToUnicodeConverter:
         offset = self._byte_to_str_offset[byte_position.offset]
         line_num = numpy.argmax(self._lines_offset > offset) - 1
         col = offset - self._lines_offset[line_num]
+        # line number can change. File example:
+        # github.com/src-d/style-analyzer/blob/ed9324d783eb0082d2f59de336190c8805a33c75/lookout/style/format/tests/bugs/002_bad_line_positions/browser-policy-content.js
         line = self._lines[line_num]
         if len(line) == col:
             if line.splitlines()[0] != line:
                 # ends with newline
                 line_num += 1
                 col = 0
-        assert line_num + 1 == byte_position.line, \
-            ("Line number is changed from %d to %d when convert from byte position to string "
-             "position.") % (byte_position.line, line_num + 1)
+        assert line_num + 1 >= byte_position.line, \
+            ("Unicode line number %d is smaller then in bytes (%d)."
+                "position.") % (line_num + 1, byte_position.line)
         return bblfsh.Position(offset=offset, line=line_num + 1, col=col + 1)
 
     @staticmethod
