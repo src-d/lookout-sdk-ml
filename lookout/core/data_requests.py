@@ -2,11 +2,13 @@ import functools
 import logging
 import os
 import threading
-from typing import Iterator, Optional, Tuple
+from typing import Iterable, Iterator, Optional, Tuple
 
 import bblfsh
 import grpc
 from lookout.sdk.grpc import create_channel
+from packaging.requirements import Requirement
+from packaging.version import Version
 
 from lookout.core.analyzer import Analyzer, AnalyzerModel, ReferencePointer
 from lookout.core.api.service_analyzer_pb2 import Comment
@@ -14,6 +16,16 @@ from lookout.core.api.service_data_pb2 import Change, ChangesRequest, File, File
 from lookout.core.api.service_data_pb2_grpc import DataStub
 from lookout.core.garbage_exclusion import GARBAGE_PATTERN
 from lookout.core.ports import Type
+
+
+class UnsatisfiedDriverVersionError(Exception):
+    """
+    Exception which is raised if there is a mismatching Babelfish driver version.
+    """
+
+    def __init__(self, mismatched: Iterable[Tuple[str, str]]):
+        """Initialize a new instance of `UnsatisfiedDriverVersionError`."""
+        self.args += tuple(mismatched)
 
 
 class DataService:
@@ -25,7 +37,7 @@ class DataService:
 
     def __init__(self, address: str):
         """
-        Initialize a new instance of DataService.
+        Initialize a new instance of `DataService`.
 
         :param address: GRPC endpoint to use.
         """
@@ -55,6 +67,32 @@ class DataService:
             self._data_request_local.bblfsh_stub = stub = \
                 bblfsh.aliases.ProtocolServiceStub(self._get_channel())
         return stub
+
+    def check_bblfsh_driver_versions(self, versions: Iterable[str]) -> None:
+        """
+        Ensure that the Babelfish drivers match the required versions.
+
+        The check is performed by `packaging.version`.
+
+        :param versions: setup.py-like version specifiers, e.g. "javascript==1.3.0".
+        :return: Nothing
+        :raise UnsatisfiedDriverVersionError: if there is one or more mismatches.
+        """
+        existing = self.get_bblfsh().SupportedLanguages(
+            bblfsh.aliases.SupportedLanguagesRequest()).languages
+        existing = {driver.language: Version(driver.version) for driver in existing}
+        mismatched = []
+        for reqstr in versions:
+            req = Requirement(reqstr)
+            try:
+                ver = existing[req.name]
+            except KeyError:
+                mismatched.append((req.name, "not installed, but required %s" % req.specifier))
+                continue
+            if ver not in req.specifier:
+                mismatched.append((req.name, "%s does not satisfy %s" % (ver, req.specifier)))
+        if mismatched:
+            raise UnsatisfiedDriverVersionError(mismatched)
 
     def shutdown(self):
         """
