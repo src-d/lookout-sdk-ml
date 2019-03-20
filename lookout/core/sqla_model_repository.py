@@ -4,6 +4,7 @@ import logging
 import os
 import threading
 from typing import Optional, Tuple
+from urllib.parse import urlparse, urlunparse
 
 import cachetools
 from pympler.asizeof import asizeof
@@ -66,11 +67,25 @@ class SQLAlchemyModelRepository(ModelRepository):
         :param engine_kwargs: Passed directly to SQLAlchemy's `create_engine()`.
         """
         self.fs_root = fs_root
+        # A version of db_endpoint that never contain password is needed for logging
+        db_endpoint_components = urlparse(db_endpoint)
+        if db_endpoint_components.password is not None:
+            password, netloc = db_endpoint_components.password, db_endpoint_components.netloc
+            password_index = netloc.rindex(password)
+            safe_netloc = "%s%s%s" % (
+                db_endpoint_components.netloc[:password_index],
+                "<PASSWORD>",
+                db_endpoint_components.netloc[password_index + len(password):])
+            safe_db_endpoint_components = list(db_endpoint_components)
+            safe_db_endpoint_components[1] = safe_netloc
+            self._safe_db_endpoint = urlunparse(safe_db_endpoint_components)
+        else:
+            self._safe_db_endpoint = db_endpoint
         must_initialize = not database_exists(db_endpoint)
         if must_initialize:
-            self._log.debug("%s does not exist, creating", db_endpoint)
+            self._log.debug("%s does not exist, creating", self._safe_db_endpoint)
             create_database(db_endpoint)
-            self._log.warning("created a new database at %s", db_endpoint)
+            self._log.warning("created a new database at %s", self._safe_db_endpoint)
         self._engine = create_engine(
             db_endpoint, **(engine_kwargs if engine_kwargs is not None else {}))
         must_initialize |= not self._engine.has_table(Model.__tablename__)
@@ -88,11 +103,12 @@ class SQLAlchemyModelRepository(ModelRepository):
     def __repr__(self) -> str:
         """Represent the model repository as a eval()-able string."""
         return "SQLAlchemyModelRepository(db_endpoint=%r, fs_root=%r, max_cache_mem=%r, " \
-               "ttl=%r)" % (self._engine.url, self.fs_root, self._cache.maxsize, self._cache.ttl)
+               "ttl=%r)" % (self._safe_db_endpoint, self.fs_root, self._cache.maxsize,
+                            self._cache.ttl)
 
     def __str__(self) -> str:
         """Summarize the model repository as a string."""
-        return "SQLAlchemyModelRepository(db=%s, fs=%s)" % (self._engine.url, self.fs_root)
+        return "SQLAlchemyModelRepository(db=%s, fs=%s)" % (self._safe_db_endpoint, self.fs_root)
 
     def get(self, model_id: str, model_type: Type[AnalyzerModel],
             url: str) -> Tuple[Optional[AnalyzerModel], bool]:  # noqa: D102
