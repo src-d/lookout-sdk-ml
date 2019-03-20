@@ -152,7 +152,7 @@ def with_changed_uasts(unicode: bool):  # noqa: D401
                     Unicode. False keeps DataService response untouched.
     :return: The decorated method.
     """
-    def configured_wrapped_with_changed_uasts(func):
+    def configured_with_changed_uasts(func):
         @functools.wraps(func)
         @_handle_rpc_errors
         def wrapped_with_changed_uasts(
@@ -165,7 +165,7 @@ def with_changed_uasts(unicode: bool):  # noqa: D401
 
         return wrapped_with_changed_uasts
 
-    return configured_wrapped_with_changed_uasts
+    return configured_with_changed_uasts
 
 
 def with_changed_contents(unicode: bool):  # noqa: D401
@@ -180,7 +180,7 @@ def with_changed_contents(unicode: bool):  # noqa: D401
                     Unicode. False keeps DataService response untouched.
     :return: The decorated method.
     """
-    def configured_wrapped_with_changed_contents(func):
+    def configured_with_changed_contents(func):
         @functools.wraps(func)
         @_handle_rpc_errors
         def wrapped_with_changed_contents(
@@ -193,7 +193,7 @@ def with_changed_contents(unicode: bool):  # noqa: D401
 
         return wrapped_with_changed_contents
 
-    return configured_wrapped_with_changed_contents
+    return configured_with_changed_contents
 
 
 def with_changed_uasts_and_contents(unicode: bool):  # noqa: D401
@@ -211,7 +211,7 @@ def with_changed_uasts_and_contents(unicode: bool):  # noqa: D401
     def configured_with_changed_uasts_and_contents(func):
         @functools.wraps(func)
         @_handle_rpc_errors
-        def wrapped_with_changed_uasts_and_contents(
+        def wrapped_changed_uasts_and_contents(
                 self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                 data_service: DataService, **data) -> [Comment]:
             changes = request_changes(
@@ -219,7 +219,7 @@ def with_changed_uasts_and_contents(unicode: bool):  # noqa: D401
                 unicode=unicode)
             return func(self, ptr_from, ptr_to, data_service, changes=changes, **data)
 
-        return wrapped_with_changed_uasts_and_contents
+        return wrapped_changed_uasts_and_contents
 
     return configured_with_changed_uasts_and_contents
 
