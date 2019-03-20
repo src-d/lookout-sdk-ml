@@ -20,11 +20,11 @@ from lookout.core.ports import Type
 
 class UnsatisfiedDriverVersionError(Exception):
     """
-    Error whihc is raised if there is a mismatching Babelfish driver version.
+    Exception which is raised if there is a mismatching Babelfish driver version.
     """
 
     def __init__(self, mismatched: Iterable[Tuple[str, str]]):
-        """Initialize a new instance of UnsatisfiedDriverVersionError."""
+        """Initialize a new instance of `UnsatisfiedDriverVersionError`."""
         self.args += tuple(mismatched)
 
 
@@ -37,7 +37,7 @@ class DataService:
 
     def __init__(self, address: str):
         """
-        Initialize a new instance of DataService.
+        Initialize a new instance of `DataService`.
 
         :param address: GRPC endpoint to use.
         """
@@ -68,7 +68,7 @@ class DataService:
                 bblfsh.aliases.ProtocolServiceStub(self._get_channel())
         return stub
 
-    def check_bblfsh_driver_versions(self, versions: Iterable[str]):
+    def check_bblfsh_driver_versions(self, versions: Iterable[str]) -> None:
         """
         Ensure that the Babelfish drivers match the required versions.
 
@@ -80,12 +80,13 @@ class DataService:
         """
         existing = self.get_bblfsh().SupportedLanguages(
             bblfsh.aliases.SupportedLanguagesRequest()).languages
+        existing = {driver.language: Version(driver.version) for driver in existing}
         mismatched = []
         for reqstr in versions:
             req = Requirement(reqstr)
             try:
-                ver = Version([d.version for d in existing if d.language == req.name][0])
-            except IndexError:
+                ver = existing[req.name]
+            except KeyError:
                 mismatched.append((req.name, "not installed, but required %s" % req.specifier))
                 continue
             if ver not in req.specifier:
