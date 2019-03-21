@@ -22,33 +22,23 @@ class LibTests(unittest.TestCase):
         Etiam vitae nisi at ante pretium lacinia et eu massa."""
         base_lines_number = text_base.count("\n") + 1
         # Delete first line
-        new_line_indices = find_deleted_lines(
-            File(content=bytes(text_base, "utf-8")),
-            File(content=bytes("\n".join(text_base.split("\n")[1:]), "utf-8")))
+        new_line_indices = find_deleted_lines(text_base, "\n".join(text_base.split("\n")[1:]))
         self.assertEqual(new_line_indices, [1])
         # Delete first two lines
-        new_line_indices = find_deleted_lines(
-            File(content=bytes(text_base, "utf-8")),
-            File(content=bytes("\n".join(text_base.split("\n")[2:]), "utf-8")))
+        new_line_indices = find_deleted_lines(text_base, "\n".join(text_base.split("\n")[2:]))
         self.assertEqual(new_line_indices, [1])
         # Delete last line
-        new_line_indices = find_deleted_lines(
-            File(content=bytes(text_base, "utf-8")),
-            File(content=bytes("\n".join(text_base.split("\n")[:-1]), "utf-8")))
+        new_line_indices = find_deleted_lines(text_base, "\n".join(text_base.split("\n")[:-1]))
         self.assertEqual(new_line_indices, [base_lines_number - 1])
         # Delete last two lines
-        new_line_indices = find_deleted_lines(
-            File(content=bytes(text_base, "utf-8")),
-            File(content=bytes("\n".join(text_base.split("\n")[:-2]), "utf-8")))
+        new_line_indices = find_deleted_lines(text_base, "\n".join(text_base.split("\n")[:-2]))
         self.assertEqual(new_line_indices, [base_lines_number - 2])
         # Delete line in the middle
         middle = 3
         text_head = text_base.split("\n")
         text_head.pop(middle)
         text_head = "\n".join(text_head)
-        new_line_indices = find_deleted_lines(
-            File(content=bytes(text_base, "utf-8")),
-            File(content=bytes(text_head, "utf-8")))
+        new_line_indices = find_deleted_lines(text_base, text_head)
         self.assertEqual(new_line_indices, [middle, middle + 1])
 
     def test_find_modified_lines(self):
