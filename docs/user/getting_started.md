@@ -112,12 +112,12 @@ analyzer_class = MyAnalyzer
 
 `@with_changed_uasts_and_contents(unicode=False)` and `@with_uasts_and_contents(unicode=False)` 
 populate 'changes' and 'files' objects accordingly with UASTs and file contents. `unicode` argument 
-determines if you want to get either Unicode content and UAST with Unicode positions (`True`) or 
-byte content with byte positions (`False`). In our case functions we use do not use content and 
+determines whether you need Unicode content and UAST with positions in Unicode characters (`True`) or 
+byte content with positions in bytes (`False`). We don't care in our case, hence set it to `False` for performance reasons.
 position information and we set `False`. Thus we keep lookout response unchanged and save 
 computational time.
 
-If you need only the UASTs, use `@with_changed_uasts` and `@with_uasts` respectively. 
+If you need only the UASTs, decorate with `@with_changed_uasts` and `@with_uasts` respectively. 
 
 ## Running
 
