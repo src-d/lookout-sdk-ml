@@ -13,7 +13,6 @@ import requirements
 import stringcase
 
 from lookout.core import __version__ as lookout_sdk_ml_version
-from lookout.core import slogging
 
 
 def package_cmdline_entry(args: argparse.Namespace) -> Union[None, int]:  # noqa: D401
@@ -24,7 +23,6 @@ def package_cmdline_entry(args: argparse.Namespace) -> Union[None, int]:  # noqa
     :param args: Parsed command line arguments.
     :return: None or error code.
     """
-    slogging.setup(args.log_level, False, args.log_config_path)
     return package(args.yes, args.no, args.workdir, args.analyzer, args.requirements,
                    args.repo, args.user, args.token)
 
