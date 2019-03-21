@@ -160,6 +160,10 @@ class Analyzer:
         :param url: The analyzed project's Git remote.
         :param config: Configuration of the analyzer of unspecified structure.
         """
+        for attr_name in ("version", "model_type", "name", "vendor"):
+            if getattr(self, attr_name) is None:
+                raise ValueError("%s attribute is expected to be set for class %s" % (
+                    attr_name, type(self)))
         self.model = model
         self.url = url
         self.config = config
