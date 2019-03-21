@@ -32,6 +32,7 @@ class FakeAnalyzer(Analyzer):
     version = 1
     model_type = FakeModel
     name = "fake.analyzer.FakeAnalyzer"
+    vendor = "source{d}"
     instance = None
     service = None
     skip_train = False
@@ -64,6 +65,7 @@ class FakeDummyAnalyzer(Analyzer):
     version = 1
     model_type = DummyAnalyzerModel
     name = "fake.analyzer.FakeDummyAnalyzer"
+    vendor = "source{d}"
     instance = None
     trained = False
 
