@@ -13,16 +13,16 @@ from lookout.core.api.service_data_pb2 import File
 from lookout.core.garbage_exclusion import GARBAGE_PATTERN
 
 
-def find_new_lines(before: File, after: File) -> List[int]:
+def find_new_lines(before: str, after: str) -> List[int]:
     """
-    Return the new line numbers from the pair of "before" and "after" files.
+    Return the new line numbers from the pair of "before" and "after" file contents.
 
     :param before: The previous contents of the file.
     :param after: The new contents of the file.
     :return: List of line numbers new to `after`.
     """
-    matcher = SequenceMatcher(a=before.content.decode("utf-8", "replace").splitlines(),
-                              b=after.content.decode("utf-8", "replace").splitlines())
+    matcher = SequenceMatcher(a=before.splitlines(),
+                              b=after.splitlines())
     result = []
     for action, _, _, j1, j2 in matcher.get_opcodes():
         if action in ("equal", "delete"):
@@ -31,16 +31,16 @@ def find_new_lines(before: File, after: File) -> List[int]:
     return result
 
 
-def find_deleted_lines(before: File, after: File) -> List[int]:
+def find_deleted_lines(before: str, after: str) -> List[int]:
     """
-    Return line numbers next to deleted lines in the new file.
+    Return line numbers next to deleted lines in the new file content.
 
     :param before: The previous contents of the file.
     :param after: The new contents of the file.
     :return: list of line numbers next to deleted lines.
     """
-    before_lines = before.content.decode("utf-8", "replace").splitlines()
-    after_lines = after.content.decode("utf-8", "replace").splitlines()
+    before_lines = before.splitlines()
+    after_lines = after.splitlines()
     matcher = SequenceMatcher(a=before_lines, b=after_lines)
     result = []
     for action, _, _, j1, _ in matcher.get_opcodes():

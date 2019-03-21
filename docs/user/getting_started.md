@@ -69,7 +69,7 @@ class MyAnalyzer(Analyzer):
     description = "Reports the changes in UAST node counts."
     _log = logging.getLogger("MyAnalyzer")
 
-    @with_changed_uasts_and_contents
+    @with_changed_uasts_and_contents(unicode=False)
     def analyze(self, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                 data_service: DataService, changes: Iterable[Change]) -> [Comment]:
         self._log.info("analyze %s %s", ptr_from.commit, ptr_to.commit)
@@ -86,7 +86,7 @@ class MyAnalyzer(Analyzer):
         return comments
 
     @classmethod
-    @with_uasts_and_contents
+    @with_uasts_and_contents(unicode=False)
     def train(cls, ptr: ReferencePointer, config: Dict[str, Any], data_service: DataService,
               files: Iterable[File]) -> AnalyzerModel:
         cls._log.info("train %s %s", ptr.url, ptr.commit)
@@ -110,9 +110,14 @@ class MyAnalyzer(Analyzer):
 analyzer_class = MyAnalyzer
 ```
 
-`@with_changed_uasts_and_contents` and `@with_uasts_and_contents` populate the corresponding
-objects with UASTs and file contents. If you need only the UASTs, use
-`@with_changed_uasts` and `@with_uasts` respectively.
+`@with_changed_uasts_and_contents(unicode=False)` and `@with_uasts_and_contents(unicode=False)` 
+populate 'changes' and 'files' objects accordingly with UASTs and file contents. `unicode` argument 
+determines whether you need Unicode content and UAST with positions in Unicode characters (`True`) or 
+byte content with positions in bytes (`False`). We don't care in our case, hence set it to `False` for performance reasons.
+position information and we set `False`. Thus we keep lookout response unchanged and save 
+computational time.
+
+If you need only the UASTs, decorate with `@with_changed_uasts` and `@with_uasts` respectively. 
 
 ## Running
 
