@@ -4,6 +4,7 @@ import threading
 import unittest
 
 import bblfsh
+import grpc
 
 import lookout.core
 from lookout.core.analyzer import ReferencePointer, UnicodeFile
@@ -86,6 +87,31 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              self.data_service)
 
+    def test_with_changed_uasts_rpc_error(self):
+        called = False
+
+        def func(imposter, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
+                 data_service: DataService, **data):
+            nonlocal called
+            called = True
+
+        def fail(f):
+            def wrapped():
+                f()
+                self.assertIsNotNone(self.data_service._data_request_local.channel)
+                raise grpc.RpcError()
+            return wrapped
+
+        self.data_service._get_channel = fail(self.data_service._get_channel)
+        func = with_changed_uasts(unicode=False)(func)
+
+        self.assertRaises(grpc.RpcError, func, self,
+                          ReferencePointer(self.url, self.ref, self.COMMIT_FROM),
+                          ReferencePointer(self.url, self.ref, self.COMMIT_TO),
+                          self.data_service)
+        self.assertFalse(called)
+        self.assertIsNone(self.data_service._data_request_local.channel)
+
     def test_with_changed_contents(self):
         def func(imposter, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                  data_service: DataService, **data):
@@ -148,6 +174,30 @@ class DataRequestsTests(unittest.TestCase, EventHandlers):
              ReferencePointer(self.url, self.ref, self.COMMIT_TO),
              None,
              self.data_service)
+
+    def test_with_uasts_rpc_error(self):
+        called = False
+
+        def func(imposter, ptr: ReferencePointer, config: dict,
+                 data_service: DataService, **data):
+            nonlocal called
+            called = True
+
+        def fail(f):
+            def wrapped():
+                f()
+                self.assertIsNotNone(self.data_service._data_request_local.channel)
+                raise grpc.RpcError()
+            return wrapped
+
+        self.data_service._get_channel = fail(self.data_service._get_channel)
+
+        func = with_uasts(unicode=False)(func)
+        self.assertRaises(grpc.RpcError, func, self,
+                          ReferencePointer(self.url, self.ref, self.COMMIT_TO), None,
+                          self.data_service)
+        self.assertFalse(called)
+        self.assertIsNone(self.data_service._data_request_local.channel)
 
     def test_with_contents(self):
         def func(imposter, ptr: ReferencePointer, config: dict,
