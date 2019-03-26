@@ -120,6 +120,7 @@ class LookoutSDK:
             "--from", fr,
             "--to", to,
             "--git-dir", git_dir,
+            "--log-format", "json",
         ]
         if log_level:
             command.extend(("--log-level", log_level))
@@ -127,7 +128,7 @@ class LookoutSDK:
             command.extend(("--bblfshd", "ipv4://" + bblfsh))
         if config_json:
             command.extend(("--config-json", json.dumps(config_json)))
-        return subprocess.run(command, stdout=sys.stdout, stderr=sys.stderr, check=True)
+        return subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
 
 def check_port_free(port: int) -> bool:
