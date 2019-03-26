@@ -127,7 +127,21 @@ class DataService:
         return channel
 
 
-def _handle_rpc_errors(func):
+def _handle_analyze_rpc_errors(func):
+    @functools.wraps(func)
+    def wrapped_handle_rpc_errors(self: Analyzer, ptr_from: ReferencePointer,
+                                  ptr_to: ReferencePointer, data_service: DataService,
+                                  **data) -> AnalyzerModel:
+        try:
+            return func(self, ptr_from, ptr_to, data_service, **data)
+        except grpc.RpcError as e:
+            data_service.close_channel()
+            raise e from None
+
+    return wrapped_handle_rpc_errors
+
+
+def _handle_train_rpc_errors(func):
     @functools.wraps(func)
     def wrapped_handle_rpc_errors(cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
                                   data_service: DataService, **data) -> AnalyzerModel:
@@ -154,7 +168,7 @@ def with_changed_uasts(unicode: bool):  # noqa: D401
     """
     def configured_with_changed_uasts(func):
         @functools.wraps(func)
-        @_handle_rpc_errors
+        @_handle_analyze_rpc_errors
         def wrapped_with_changed_uasts(
                 self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                 data_service: DataService, **data) -> [Comment]:
@@ -182,7 +196,7 @@ def with_changed_contents(unicode: bool):  # noqa: D401
     """
     def configured_with_changed_contents(func):
         @functools.wraps(func)
-        @_handle_rpc_errors
+        @_handle_analyze_rpc_errors
         def wrapped_with_changed_contents(
                 self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                 data_service: DataService, **data) -> [Comment]:
@@ -210,7 +224,7 @@ def with_changed_uasts_and_contents(unicode: bool):  # noqa: D401
     """
     def configured_with_changed_uasts_and_contents(func):
         @functools.wraps(func)
-        @_handle_rpc_errors
+        @_handle_analyze_rpc_errors
         def wrapped_changed_uasts_and_contents(
                 self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                 data_service: DataService, **data) -> [Comment]:
@@ -239,7 +253,7 @@ def with_uasts(unicode: bool):  # noqa: D401
     """
     def configured_with_uasts(func):
         @functools.wraps(func)
-        @_handle_rpc_errors
+        @_handle_train_rpc_errors
         def wrapped_with_uasts(cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
                                data_service: DataService, **data) -> AnalyzerModel:
             files = request_files(data_service.get_data(), ptr, contents=False, uast=True,
@@ -266,7 +280,7 @@ def with_contents(unicode: bool):  # noqa: D401
     """
     def configured_with_contents(func):
         @functools.wraps(func)
-        @_handle_rpc_errors
+        @_handle_train_rpc_errors
         def wrapped_with_contents(cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
                                   data_service: DataService, **data) -> AnalyzerModel:
             files = request_files(data_service.get_data(), ptr, contents=True, uast=False,
@@ -293,10 +307,10 @@ def with_uasts_and_contents(unicode: bool):  # noqa: D401
     """
     def configured_with_uasts_and_contents(func):
         @functools.wraps(func)
-        @_handle_rpc_errors
-        def wrapped_with_uasts_and_contents(cls: Type[Analyzer], ptr: ReferencePointer,
-                                            config: dict,
-                                            data_service: DataService, **data) -> AnalyzerModel:
+        @_handle_train_rpc_errors
+        def wrapped_with_uasts_and_contents(
+                cls: Type[Analyzer], ptr: ReferencePointer, config: dict,
+                data_service: DataService, **data) -> AnalyzerModel:
             files = request_files(data_service.get_data(), ptr, contents=True, uast=True,
                                   unicode=unicode)
             return func(cls, ptr, config, data_service, files=files, **data)
