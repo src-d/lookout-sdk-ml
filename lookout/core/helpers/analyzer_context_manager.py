@@ -85,15 +85,21 @@ class AnalyzerContextManager:
                 "AnalyzerContextManager.review() is available only inside `with`")
         process = self._lookout_sdk.review(fr, to, self._port, git_dir=git_dir, bblfsh=bblfsh,
                                            log_level=log_level, config_json=config_json)
-        for log_line in process.stderr.splitlines():
-            log_entry = json.loads(log_line.decode())
-            if log_entry["msg"] == "line comment":
-                yield Comment(
-                    file=log_entry["file"], text=log_entry["text"], line=log_entry["line"])
-            if log_entry["msg"] == "file comment":
-                yield Comment(file=log_entry["file"], text=log_entry["text"])
-            if log_entry["msg"] == "global comment":
-                yield Comment(text=log_entry["text"])
+
+        def comments_iterator(logs):
+            # TODO (zurk): Use stdout and remove ifs when the lookout issue is solved:
+            # https://github.com/src-d/lookout/issues/601
+            for log_line in logs.splitlines():
+                log_entry = json.loads(log_line.decode())
+                if log_entry["msg"] == "line comment":
+                    yield Comment(
+                        file=log_entry["file"], text=log_entry["text"], line=log_entry["line"])
+                if log_entry["msg"] == "file comment":
+                    yield Comment(file=log_entry["file"], text=log_entry["text"])
+                if log_entry["msg"] == "global comment":
+                    yield Comment(text=log_entry["text"])
+
+        return comments_iterator(process.stderr)
 
     def push(self, fr: str, to: str, *, git_dir: str, bblfsh: Optional[str]=None,
              log_level: Optional[str]=None, config_json: Optional[dict]=None) \
