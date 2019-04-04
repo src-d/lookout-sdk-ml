@@ -127,7 +127,14 @@ class DataService:
         return channel
 
 
-def _handle_analyze_rpc_errors(func):
+def handle_analyze_rpc_errors(func):  # noqa: D401
+    """
+    Decorator to properly handle rps errors that is close related DataService channel before \
+    pass the exception.
+
+    :param func: Method to decorate.
+    :return: The decorated method.
+    """
     @functools.wraps(func)
     def wrapped_handle_rpc_errors(self: Analyzer, ptr_from: ReferencePointer,
                                   ptr_to: ReferencePointer, data_service: DataService,
@@ -168,7 +175,7 @@ def with_changed_uasts(unicode: bool):  # noqa: D401
     """
     def configured_with_changed_uasts(func):
         @functools.wraps(func)
-        @_handle_analyze_rpc_errors
+        @handle_analyze_rpc_errors
         def wrapped_with_changed_uasts(
                 self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                 data_service: DataService, **data) -> [Comment]:
@@ -196,7 +203,7 @@ def with_changed_contents(unicode: bool):  # noqa: D401
     """
     def configured_with_changed_contents(func):
         @functools.wraps(func)
-        @_handle_analyze_rpc_errors
+        @handle_analyze_rpc_errors
         def wrapped_with_changed_contents(
                 self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                 data_service: DataService, **data) -> [Comment]:
@@ -224,7 +231,7 @@ def with_changed_uasts_and_contents(unicode: bool):  # noqa: D401
     """
     def configured_with_changed_uasts_and_contents(func):
         @functools.wraps(func)
-        @_handle_analyze_rpc_errors
+        @handle_analyze_rpc_errors
         def wrapped_changed_uasts_and_contents(
                 self: Analyzer, ptr_from: ReferencePointer, ptr_to: ReferencePointer,
                 data_service: DataService, **data) -> [Comment]:
