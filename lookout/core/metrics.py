@@ -1,4 +1,5 @@
 import os
+import re
 import string
 from threading import Lock
 from typing import Union
@@ -132,7 +133,8 @@ class PrometheusServer:
         self._port = port
         self._addr = host
         self._metrics = {}
-        self._invalid_punctuation = "".join(set(string.punctuation) - set(["_"]))
+        self._invalid_punctuation = "".join(set(string.punctuation) - set(["_", ":"]))
+        self._valid_name_regex = re.compile("[a-zA-Z_:][a-zA-Z0-9_:]*")
 
     @property
     def port(self) -> int:
@@ -172,13 +174,14 @@ class PrometheusServer:
         self.metrics[name] = ConfidentCounter(name, labelnames, *args, **kwargs)
 
     def _filter_metric_name(self, name: str):
-        name = name.replace(".", "_")
-        filtered_name = name.translate(str.maketrans("", "", self._invalid_punctuation))
-        return filtered_name
-        if filtered_name != name:
+        name = name.replace(".", ":")
+
+        if not self._valid_name_regex.match(name):
+            filtered_name = name.translate(str.maketrans("", "", self._invalid_punctuation))
             invalid_characters = "".join(set(name) - set(filtered_name))
             raise ValueError("Invalid name for metric: {}, it contains the following "
                              "invalid characters: {}".format(filtered_name, invalid_characters))
+        return name
 
     def submit_event(self, key: str, value: Union[int, float, bool], *args, **kwargs):
         """Register an event by a key and with a numeric value.
