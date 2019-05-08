@@ -7,14 +7,12 @@ from prometheus_client import start_http_server
 from prometheus_client.metrics import MetricWrapperBase
 
 
-PROMETHEUS_SERVER = None
-
+_prometheus_server = None
 PROMETHEUS_HOST = os.getenv("PROMETHEUS_HOST", "0.0.0.0")
-
 PROMETHEUS_PORT = int(os.getenv("PROMETHEUS_PORT", "8000"))
 
 
-class MutexValue:
+class PreciseFloat:
     """A float protected by a mutex."""
 
     _multiprocess = False
@@ -22,22 +20,22 @@ class MutexValue:
     def __init__(self, typ, metric_name, name, labelnames, labelvalues, **kwargs):
         """Store values protected by a lock."""
         self._value = 0.0
+        self._aux = 0
         self._lock = Lock()
-        self._interm_sum = 0
 
     def add(self, amount):
         """Increase the value by the given amount."""
         with self._lock:
             summ = self._value
-            y = amount - self._interm_sum
+            y = amount - self._aux
             t = summ + y
-            self._interm_sum = (t - summ) - y
+            self._aux = (t - summ) - y
             self._value = t
 
     def set(self, value):
         """Set the value to a given amount."""
         with self._lock:
-            self._interm_sum = 0
+            self._aux = 0
             self._value = value
 
     def get(self):
@@ -56,14 +54,14 @@ class ConfidentCounter(MetricWrapperBase):
     _type = "counter"
 
     def _metric_init(self):
-        self._count = MutexValue(
+        self._count = PreciseFloat(
             self._type, self._name, self._name + "_count", self._labelnames, self._labelvalues,
         )
-        self._sum = MutexValue(
+        self._sum = PreciseFloat(
             self._type, self._name, self._name + "_sum", self._labelnames, self._labelvalues,
         )
 
-        self._square = MutexValue(
+        self._square = PreciseFloat(
             self._type,
             self._name,
             self._name + "_sum_of_squares",
@@ -84,21 +82,21 @@ class ConfidentCounter(MetricWrapperBase):
         return ("_count", {}, count), ("_sum", {}, _sum), ("_sum_of_squares", {}, square)
 
 
-def start_prometheus(port: int = PROMETHEUS_PORT, addr: str = PROMETHEUS_HOST):
+def start_prometheus(port: int = PROMETHEUS_PORT, host: str = PROMETHEUS_HOST):
     """Start the prometheus HTTP Server in the target port and address.
 
     The stored metrics will be accessible at http://addr:port.
 
     :param port: Target port to run the PrometheusServer.
-    :param addr: IP address of the PrometheusServer. It defaults to locahost.
+    :param host: IP address of the PrometheusServer. It defaults to locahost.
     :return: None
     """
-    global PROMETHEUS_SERVER
-    if PROMETHEUS_SERVER is None:
-        PROMETHEUS_SERVER = PrometheusServer(port=port, addr=addr)
-        PROMETHEUS_SERVER.start_http_server()
-    elif not PROMETHEUS_SERVER.is_running:
-        PROMETHEUS_SERVER.start_http_server()
+    global _prometheus_server
+    if _prometheus_server is None:
+        _prometheus_server = PrometheusServer(port=port, host=host)
+        _prometheus_server.start_http_server()
+    elif not _prometheus_server.is_running:
+        _prometheus_server.start_http_server()
 
 
 def submit_event(key: str, value: Union[int, float, bool], labelnames: str = ""):
@@ -111,9 +109,9 @@ def submit_event(key: str, value: Union[int, float, bool], labelnames: str = "")
     :param labelnames: Additional description of the event. Only used when creating a new event.
     :return: None
     """
-    start_prometheus()
-    if PROMETHEUS_SERVER is not None:
-        PROMETHEUS_SERVER.submit_event(key=key, value=value, labelnames=labelnames)
+    start_prometheus(host=PROMETHEUS_HOST, port=PROMETHEUS_PORT)
+    if _prometheus_server is not None:
+        _prometheus_server.submit_event(key=key, value=value, labelnames=labelnames)
     else:
         raise ValueError(
             "PrometheusServer is not started yet, please call start_prometheus() first.",
@@ -123,16 +121,16 @@ def submit_event(key: str, value: Union[int, float, bool], labelnames: str = "")
 class PrometheusServer:
     """Manage the streaming process for different metrics."""
 
-    def __init__(self, port=PROMETHEUS_PORT, addr=PROMETHEUS_HOST):
+    def __init__(self, host: str, port: int):
         """
          Manage the streaming process for different metrics.
 
-        :param port:
-        :param addr:
+        :param port: Port where the server will be accessible.
+        :param host: Address where the server will be accessible.
         """
         self._is_running = False
         self._port = port
-        self._addr = addr
+        self._addr = host
         self._metrics = {}
         self._invalid_punctuation = "".join(set(string.punctuation) - set(["_"]))
 
@@ -142,7 +140,7 @@ class PrometheusServer:
         return self._port
 
     @property
-    def addr(self) -> str:
+    def host(self) -> str:
         """Return the address where the server is running."""
         return self._addr
 
@@ -158,7 +156,7 @@ class PrometheusServer:
 
     def start_http_server(self):
         """Start the HTTP server."""
-        start_http_server(port=self.port, addr=self.addr)
+        start_http_server(port=self.port, addr=self.host)
         self._is_running = True
 
     def create_new_metric(self, name: str, labelnames: str = "", *args, **kwargs):
@@ -175,7 +173,12 @@ class PrometheusServer:
 
     def _filter_metric_name(self, name: str):
         name = name.replace(".", "_")
-        return name.translate(str.maketrans("", "", self._invalid_punctuation))
+        filtered_name = name.translate(str.maketrans("", "", self._invalid_punctuation))
+        return filtered_name
+        if filtered_name != name:
+            invalid_characters = "".join(set(name) - set(filtered_name))
+            raise ValueError("Invalid name for metric: {}, it contains the following "
+                             "invalid characters: {}".format(filtered_name, invalid_characters))
 
     def submit_event(self, key: str, value: Union[int, float, bool], *args, **kwargs):
         """Register an event by a key and with a numeric value.

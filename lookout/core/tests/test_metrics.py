@@ -80,14 +80,14 @@ class MetricReader:
 
 
 def dummy_server():
-    from lookout.core.metrics import PROMETHEUS_SERVER as server
+    from lookout.core.metrics import _prometheus_server as server
 
     if server is None:
         try:
             start_prometheus(8000)
         except OSError as e:
             raise e
-        from lookout.core.metrics import PROMETHEUS_SERVER as server
+        from lookout.core.metrics import _prometheus_server as server
     assert server is not None
     return server
 
@@ -131,7 +131,7 @@ class TestPrometheusServer(unittest.TestCase):
 
     def test_attributes(self):
         self.assertIsInstance(self.server.metrics, dict)
-        self.assertIsInstance(self.server.addr, str)
+        self.assertIsInstance(self.server.host, str)
         self.assertIsInstance(self.server.port, int)
         self.assertIsInstance(self.server.is_running, bool)
 
