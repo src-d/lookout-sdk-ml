@@ -110,7 +110,7 @@ def submit_event(key: str, value: Union[int, float, bool], labelnames: str = "")
 class PrometheusServer:
     """Manage the streaming process for different metrics."""
 
-    _valid_name_regex = re.compile("[a-zA-Z_:][a-zA-Z0-9_:]*")
+    _valid_name_regex = r"[a-zA-Z_:][a-zA-Z0-9_:]*"
 
     def __init__(self, host: str, port: int):
         """
@@ -163,7 +163,7 @@ class PrometheusServer:
         orig_name = name
         name = name.replace(".", ":")
 
-        if not self._valid_name_regex.match(name):
+        if not re.match(self._valid_name_regex, name):
             raise ValueError("%s is an invalid event name" % orig_name)
         return name
 

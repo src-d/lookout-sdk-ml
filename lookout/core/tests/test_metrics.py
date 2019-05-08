@@ -135,6 +135,16 @@ class TestPrometheusServer(unittest.TestCase):
         self.assertIsInstance(self.server.port, int)
         self.assertIsInstance(self.server.is_running, bool)
 
+    def test_filter_metric_name(self):
+        valid_name = "miau.gdb"
+        filtered = self.server._filter_metric_name(name=valid_name)
+        self.assertEqual(filtered, "miau:gdb")
+        with self.assertRaises(ValueError):
+            invalid_name = "!AM!?wilto%."
+            self.server._filter_metric_name(name=invalid_name)
+            # match = self.server._valid_name_regex.match(invalid_name)
+            # self.assertEqual(filtered, match)
+
     def test_submit_rolling_stats(self):
         name = "test_rolling_stats"
         val = 4
