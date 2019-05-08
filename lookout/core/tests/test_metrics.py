@@ -92,9 +92,10 @@ def dummy_server():
     return server
 
 
-class TestMetrics(unittest.TestCase):
+class TestConfidentCounter(unittest.TestCase):
     def test_kahan_algorithm(self):
         metric = ConfidentCounter("test_data_kahan", "running counters")
+        # why this number? https://en.wikipedia.org/wiki/Double-precision_floating-point_format
         brute_sum = compare = 4503599627370496  # 4_503_599_627_370_496
         metric.add(brute_sum)
         val = 0.001
@@ -106,11 +107,33 @@ class TestMetrics(unittest.TestCase):
         self.assertEqual(metric_val, brute_sum + 1.)
         self.assertNotEqual(compare, brute_sum + 1)
 
+    def test_get(self):
+        metric = ConfidentCounter("test_get_counter", "running counters")
+        metric.add(10)
+        self.assertEqual(metric._count.get(), 1)
+        self.assertEqual(metric._sum.get(), 10)
+        self.assertEqual(metric._square.get(), 100)
+
+    def test_set(self):
+        metric = ConfidentCounter("test_set_counter", "running counters")
+        metric._count.set(1)
+        metric._sum.set(10)
+        metric._square.set(100)
+        self.assertEqual(metric._count.get(), 1)
+        self.assertEqual(metric._sum.get(), 10)
+        self.assertEqual(metric._square.get(), 100)
+
 
 class TestPrometheusServer(unittest.TestCase):
     def setUp(self) -> None:
         self.reader = MetricReader(8000)
         self.server = dummy_server()
+
+    def test_attributes(self):
+        self.assertIsInstance(self.server.metrics, dict)
+        self.assertIsInstance(self.server.addr, str)
+        self.assertIsInstance(self.server.port, int)
+        self.assertIsInstance(self.server.is_running, bool)
 
     def test_submit_rolling_stats(self):
         name = "test_rolling_stats"
