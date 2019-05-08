@@ -149,17 +149,15 @@ class PrometheusServer:
         start_http_server(port=self.port, addr=self.host)
         self._is_running = True
 
-    def create_new_metric(self, name: str, labelnames: str = "", *args, **kwargs):
+    def create_new_metric(self, name: str, labelnames: str = ""):
         """Create a new metric in case it does not previously exists.
 
         :param name: It will be used as a key to identify the new metric.
         :param labelnames: Additional description of the event. Only used when creating a new
             event.
-        :param args: Additional args to initialize the target metric_type.
-        :param kwargs: Additional kwargs to initialize the target metric_type.
         :return: None
         """
-        self.metrics[name] = ConfidentCounter(name, labelnames, *args, **kwargs)
+        self.metrics[name] = ConfidentCounter(name, labelnames)
 
     def _filter_metric_name(self, name: str):
         orig_name = name
@@ -169,21 +167,19 @@ class PrometheusServer:
             raise ValueError("%s is an invalid event name" % orig_name)
         return name
 
-    def submit_event(self, key: str, value: Union[int, float, bool], *args, **kwargs):
+    def submit_event(self, key: str, value: Union[int, float, bool], labelnames: str = ""):
         """Register an event by a key and with a numeric value.
 
          If the key does not exist, it creates a new Prometheus Metric.
 
         :param key: Identifier of the event.
         :param value: Value of the event. It will convert cast variables to int.
-        :param args: Additional args to initialize the target metric_type. Ignored if no new metric
-            is created.
-        :param kwargs: Additional kwargs to initialize the target metric_type. Ignored if no new
-            metric is created.
+        :param labelnames: Additional description of the event. Only used when creating a new
+            event.
         :return: None
         """
         key = self._filter_metric_name(key)
         if key not in self.metrics:
-            self.create_new_metric(name=key, *args, **kwargs)
+            self.create_new_metric(name=key, labelnames=labelnames)
         value = int(value) if isinstance(value, bool) else value
         self.metrics[key] += value
