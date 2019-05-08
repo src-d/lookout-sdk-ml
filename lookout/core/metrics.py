@@ -1,6 +1,5 @@
 import os
 import re
-import string
 from threading import Lock
 from typing import Union
 
@@ -16,9 +15,7 @@ PROMETHEUS_PORT = int(os.getenv("PROMETHEUS_PORT", "8000"))
 class PreciseFloat:
     """A float protected by a mutex."""
 
-    _multiprocess = False
-
-    def __init__(self, typ, metric_name, name, labelnames, labelvalues, **kwargs):
+    def __init__(self):
         """Store values protected by a lock."""
         self._value = 0.0
         self._aux = 0
@@ -55,20 +52,9 @@ class ConfidentCounter(MetricWrapperBase):
     _type = "counter"
 
     def _metric_init(self):
-        self._count = PreciseFloat(
-            self._type, self._name, self._name + "_count", self._labelnames, self._labelvalues,
-        )
-        self._sum = PreciseFloat(
-            self._type, self._name, self._name + "_sum", self._labelnames, self._labelvalues,
-        )
-
-        self._square = PreciseFloat(
-            self._type,
-            self._name,
-            self._name + "_sum_of_squares",
-            self._labelnames,
-            self._labelvalues,
-        )
+        self._count = PreciseFloat()
+        self._sum = PreciseFloat()
+        self._square = PreciseFloat()
 
     def add(self, amount):
         """Keep track of the given value."""
@@ -133,7 +119,6 @@ class PrometheusServer:
         self._port = port
         self._addr = host
         self._metrics = {}
-        self._invalid_punctuation = "".join(set(string.punctuation) - set(["_", ":"]))
         self._valid_name_regex = re.compile("[a-zA-Z_:][a-zA-Z0-9_:]*")
 
     @property
@@ -174,13 +159,11 @@ class PrometheusServer:
         self.metrics[name] = ConfidentCounter(name, labelnames, *args, **kwargs)
 
     def _filter_metric_name(self, name: str):
+        orig_name = name
         name = name.replace(".", ":")
 
         if not self._valid_name_regex.match(name):
-            filtered_name = name.translate(str.maketrans("", "", self._invalid_punctuation))
-            invalid_characters = "".join(set(name) - set(filtered_name))
-            raise ValueError("Invalid name for metric: {}, it contains the following "
-                             "invalid characters: {}".format(filtered_name, invalid_characters))
+            raise ValueError("%s is an invalid event name" % orig_name)
         return name
 
     def submit_event(self, key: str, value: Union[int, float, bool], *args, **kwargs):
