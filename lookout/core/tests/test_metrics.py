@@ -95,7 +95,7 @@ def dummy_server():
 class TestMetrics(unittest.TestCase):
     def test_kahan_algorithm(self):
         metric = ConfidentCounter("test_data_kahan", "running counters")
-        brute_sum = compare = 4_503_599_627_370_496
+        brute_sum = compare = 4503599627370496  # 4_503_599_627_370_496
         metric.add(brute_sum)
         val = 0.001
         for _ in range(1000):
