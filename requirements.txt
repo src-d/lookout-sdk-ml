@@ -12,4 +12,3 @@ requirements-parser==0.2.0
 lookout-sdk==0.4.1
 packaging==19.0
 prometheus_client == 0.6.0
-urllib3<1.25,>=1.21.1

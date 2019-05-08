@@ -1,8 +1,9 @@
+import threading
 import unittest
 
 import requests
 
-from lookout.core.metrics import ConfidentCounter, start_prometheus, submit_event
+from lookout.core.metrics import ConfidentCounter, PreciseFloat, submit_event
 
 
 class MetricReader:
@@ -30,7 +31,6 @@ class MetricReader:
         return self.__data
 
     def query_data(self, addr: str = None, port: int = None) -> str:
-
         addr = self.addr if addr is None else addr
         port = self.port if port is None else port
         api_endpoint = "http://{}:{}".format(addr, port)
@@ -38,11 +38,11 @@ class MetricReader:
         if r.status_code == 200:
             data = r.content.decode()
             return data
-        else:
-            raise ValueError(
-                "\nGot status code {} when querying the server."
-                " Reponse content: {}\n".format(r.status_code, r.content.decode()),
-            )
+
+        raise ValueError(
+            "\nGot status code {} when querying the server."
+            " Reponse content: {}\n".format(r.status_code, r.content.decode()),
+        )
 
     @staticmethod
     def parse_response(data: str):
@@ -52,7 +52,6 @@ class MetricReader:
             return not (line.startswith("#") or line.startswith("python") or line == "")
 
         def parse_line(line):
-
             try:
                 name, val = line.split(" ")
             except ValueError:
@@ -84,7 +83,7 @@ def dummy_server():
 
     if server is None:
         try:
-            start_prometheus("localhost", 8000)
+            submit_event("start_server_hack", 8000)
         except OSError as e:
             raise e
         from lookout.core.metrics import _prometheus_server as server
@@ -96,32 +95,50 @@ class TestConfidentCounter(unittest.TestCase):
     def test_kahan_algorithm(self):
         metric = ConfidentCounter("test_data_kahan", "running counters")
         # why this number? https://en.wikipedia.org/wiki/Double-precision_floating-point_format
-        brute_sum = compare = 4503599627370496  # 4_503_599_627_370_496
-        metric += brute_sum
+        origin = brute_sum = 4503599627370496  # 4_503_599_627_370_496
+        metric += origin
         val = 0.001
         for _ in range(1000):
-            compare += val
+            brute_sum += val
             metric += val
 
         metric_val = metric.collect()[0].samples[1].value
-        self.assertEqual(metric_val, brute_sum + 1.)
-        self.assertNotEqual(compare, brute_sum + 1)
+        self.assertEqual(metric_val, origin + 1.)
+        self.assertNotEqual(brute_sum, origin + 1)
 
     def test_get(self):
         metric = ConfidentCounter("test_get_counter", "running counters")
         metric += 10
         self.assertEqual(metric._count.get(), 1)
         self.assertEqual(metric._sum.get(), 10)
-        self.assertEqual(metric._square.get(), 100)
+        self.assertEqual(metric._sum_of_squares.get(), 100)
 
     def test_set(self):
         metric = ConfidentCounter("test_set_counter", "running counters")
         metric._count.set(1)
         metric._sum.set(10)
-        metric._square.set(100)
+        metric._sum_of_squares.set(100)
         self.assertEqual(metric._count.get(), 1)
         self.assertEqual(metric._sum.get(), 10)
-        self.assertEqual(metric._square.get(), 100)
+        self.assertEqual(metric._sum_of_squares.get(), 100)
+
+    def test_multithread(self):
+        x = PreciseFloat()
+        threads = []
+
+        def bump():
+            nonlocal x
+            for _ in range(1000):
+                x += 1
+
+        for _ in range(100):
+            t = threading.Thread(target=bump)
+            t.start()
+            threads.append(t)
+
+        for i in range(100):
+            threads[i].join()
+        self.assertEqual(x.get(), 100 * 1000)
 
 
 class TestPrometheusServer(unittest.TestCase):
@@ -133,15 +150,14 @@ class TestPrometheusServer(unittest.TestCase):
         self.assertIsInstance(self.server.metrics, dict)
         self.assertIsInstance(self.server.host, str)
         self.assertIsInstance(self.server.port, int)
-        self.assertIsInstance(self.server.is_running, bool)
 
     def test_filter_metric_name(self):
         valid_name = "miau.gdb"
-        filtered = self.server._filter_metric_name(name=valid_name)
+        filtered = self.server._adjust_metric_name(name=valid_name)
         self.assertEqual(filtered, "miau:gdb")
         with self.assertRaises(ValueError):
             invalid_name = "!AM!?wilto%."
-            self.server._filter_metric_name(name=invalid_name)
+            self.server._adjust_metric_name(name=invalid_name)
             # match = self.server._valid_name_regex.match(invalid_name)
             # self.assertEqual(filtered, match)
 

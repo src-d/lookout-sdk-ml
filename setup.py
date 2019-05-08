@@ -46,7 +46,6 @@ setup(
         "packaging>=16.8,<20.0",
         "typing;python_version<'3.5'",
         "prometheus_client == 0.6.0",
-        "urllib3<1.25,>=1.21.1",
     ],
     extras_require={
         "test": tests_require,
