@@ -84,7 +84,7 @@ def dummy_server():
 
     if server is None:
         try:
-            start_prometheus(8000)
+            start_prometheus("localhost", 8000)
         except OSError as e:
             raise e
         from lookout.core.metrics import _prometheus_server as server
@@ -97,11 +97,11 @@ class TestConfidentCounter(unittest.TestCase):
         metric = ConfidentCounter("test_data_kahan", "running counters")
         # why this number? https://en.wikipedia.org/wiki/Double-precision_floating-point_format
         brute_sum = compare = 4503599627370496  # 4_503_599_627_370_496
-        metric.add(brute_sum)
+        metric += brute_sum
         val = 0.001
         for _ in range(1000):
             compare += val
-            metric.add(val)
+            metric += val
 
         metric_val = metric.collect()[0].samples[1].value
         self.assertEqual(metric_val, brute_sum + 1.)
@@ -109,7 +109,7 @@ class TestConfidentCounter(unittest.TestCase):
 
     def test_get(self):
         metric = ConfidentCounter("test_get_counter", "running counters")
-        metric.add(10)
+        metric += 10
         self.assertEqual(metric._count.get(), 1)
         self.assertEqual(metric._sum.get(), 10)
         self.assertEqual(metric._square.get(), 100)

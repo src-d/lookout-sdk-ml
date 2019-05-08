@@ -21,14 +21,15 @@ class PreciseFloat:
         self._aux = 0
         self._lock = Lock()
 
-    def add(self, amount):
+    def __iadd__(self, amount):
         """Increase the value by the given amount."""
         with self._lock:
-            summ = self._value
+            val = self._value
             y = amount - self._aux
-            t = summ + y
-            self._aux = (t - summ) - y
+            t = val + y
+            self._aux = (t - val) - y
             self._value = t
+        return self
 
     def set(self, value):
         """Set the value to a given amount."""
@@ -37,7 +38,7 @@ class PreciseFloat:
             self._value = value
 
     def get(self):
-        """Read the internal value."""
+        """Read the current value."""
         with self._lock:
             return self._value
 
@@ -56,20 +57,21 @@ class ConfidentCounter(MetricWrapperBase):
         self._sum = PreciseFloat()
         self._square = PreciseFloat()
 
-    def add(self, amount):
+    def __iadd__(self, amount):
         """Keep track of the given value."""
-        self._count.add(1)
-        self._sum.add(amount)
-        self._square.add(amount ** 2)
+        self._count += 1
+        self._sum += amount
+        self._square += amount ** 2
+        return self
 
     def _child_samples(self):
-        count = max(self._count.get(), 1)
+        count = self._count.get()
         _sum = self._sum.get()
         square = self._square.get()
         return ("_count", {}, count), ("_sum", {}, _sum), ("_sum_of_squares", {}, square)
 
 
-def start_prometheus(port: int = PROMETHEUS_PORT, host: str = PROMETHEUS_HOST):
+def start_prometheus(host: str, port: int):
     """Start the prometheus HTTP Server in the target port and address.
 
     The stored metrics will be accessible at http://addr:port.
@@ -108,6 +110,8 @@ def submit_event(key: str, value: Union[int, float, bool], labelnames: str = "")
 class PrometheusServer:
     """Manage the streaming process for different metrics."""
 
+    _valid_name_regex = re.compile("[a-zA-Z_:][a-zA-Z0-9_:]*")
+
     def __init__(self, host: str, port: int):
         """
          Manage the streaming process for different metrics.
@@ -119,7 +123,6 @@ class PrometheusServer:
         self._port = port
         self._addr = host
         self._metrics = {}
-        self._valid_name_regex = re.compile("[a-zA-Z_:][a-zA-Z0-9_:]*")
 
     @property
     def port(self) -> int:
@@ -183,4 +186,4 @@ class PrometheusServer:
         if key not in self.metrics:
             self.create_new_metric(name=key, *args, **kwargs)
         value = int(value) if isinstance(value, bool) else value
-        self.metrics[key].add(value)
+        self.metrics[key] += value
