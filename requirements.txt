@@ -11,3 +11,4 @@ bblfsh==2.12.7
 requirements-parser==0.2.0
 lookout-sdk==0.4.1
 packaging==19.0
+prometheus_client == 0.6.0

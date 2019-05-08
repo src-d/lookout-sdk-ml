@@ -45,6 +45,7 @@ setup(
         "lookout-sdk>=0.4.1,<0.5",
         "packaging>=16.8,<20.0",
         "typing;python_version<'3.5'",
+        "prometheus_client == 0.6.0",
     ],
     extras_require={
         "test": tests_require,
