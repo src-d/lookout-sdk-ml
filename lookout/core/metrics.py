@@ -1,4 +1,5 @@
 import os
+import string
 from threading import Lock
 from typing import Union
 
@@ -133,6 +134,7 @@ class PrometheusServer:
         self._port = port
         self._addr = addr
         self._metrics = {}
+        self._invalid_punctuation = "".join(set(string.punctuation) - set(["_"]))
 
     @property
     def port(self) -> int:
@@ -171,6 +173,10 @@ class PrometheusServer:
         """
         self.metrics[name] = ConfidentCounter(name, labelnames, *args, **kwargs)
 
+    def _filter_metric_name(self, name: str):
+        name = name.replace(".", "_")
+        return name.translate(str.maketrans("", "", self._invalid_punctuation))
+
     def submit_event(self, key: str, value: Union[int, float, bool], *args, **kwargs):
         """Register an event by a key and with a numeric value.
 
@@ -184,6 +190,7 @@ class PrometheusServer:
             metric is created.
         :return: None
         """
+        key = self._filter_metric_name(key)
         if key not in self.metrics:
             self.create_new_metric(name=key, *args, **kwargs)
         value = int(value) if isinstance(value, bool) else value
