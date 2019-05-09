@@ -40,7 +40,7 @@ setup(
         "configargparse>=0.13,<2.0",
         "humanfriendly>=4.0,<5.0",
         "psycopg2-binary>=2.7,<3.0",
-        "modelforge>=0.13.1,<0.14.0",
+        "modelforge>=0.13.2,<0.14.0",
         "requirements-parser>=0.2.0,<2.0",
         "lookout-sdk>=0.4.1,<0.5",
         "packaging>=16.8,<20.0",
