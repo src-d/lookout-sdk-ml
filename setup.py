@@ -31,6 +31,7 @@ setup(
     },
     keywords=["machine learning on source code", "babelfish", "lookout"],
     install_requires=[
+        "requests==2.21.0",
         "bblfsh>=2.12.7,<3.0",
         "stringcase>=1.2.0,<2.0",
         "sqlalchemy>=1.0.0,<2.0",

@@ -6,6 +6,7 @@ cachetools==2.0.1
 configargparse==0.13.0
 humanfriendly==4.16.1
 psycopg2-binary==2.7.5
+requests==2.21.0
 modelforge==0.12.0
 bblfsh==2.12.7
 requirements-parser==0.2.0
