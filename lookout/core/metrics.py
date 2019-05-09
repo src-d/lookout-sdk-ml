@@ -8,6 +8,7 @@ from prometheus_client.metrics import MetricWrapperBase
 
 
 _prometheus_server = None
+_prometheus_lock = Lock()
 PROMETHEUS_HOST = os.getenv("PROMETHEUS_HOST", "0.0.0.0")
 PROMETHEUS_PORT = int(os.getenv("PROMETHEUS_PORT", "8000"))
 
@@ -88,9 +89,10 @@ def submit_event(key: str, value: Union[int, float, bool], description: str = ""
     :param description: Additional description of the event. Only used when creating a new event.
     :return: None
     """
-    global _prometheus_server
-    if _prometheus_server is None:
-        _prometheus_server = PrometheusServer(host=PROMETHEUS_HOST, port=PROMETHEUS_PORT)
+    global _prometheus_server, _prometheus_lock
+    with _prometheus_lock:
+        if _prometheus_server is None:
+            _prometheus_server = PrometheusServer(host=PROMETHEUS_HOST, port=PROMETHEUS_PORT)
     _prometheus_server.submit_event(key=key, value=value, description=description)
 
 
@@ -109,6 +111,7 @@ class PrometheusServer:
         self._port = port
         self._addr = host
         self._metrics = {}
+        self._metrics_lock = Lock()
         start_http_server(port=self.port, addr=self.host)
 
     @property
@@ -156,6 +159,7 @@ class PrometheusServer:
         :return: None
         """
         key = self._adjust_metric_name(key)
-        if key not in self.metrics:
-            self.create_new_metric(name=key, description=description)
+        with self._metrics_lock:
+            if key not in self.metrics:
+                self.create_new_metric(name=key, description=description)
         self.metrics[key] += float(value)
