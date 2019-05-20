@@ -48,6 +48,7 @@ setup(
         "typing;python_version<'3.5'",
         "prometheus_client == 0.6.0",
     ],
+    python_requires=">=3.5",
     extras_require={
         "test": tests_require,
     },
