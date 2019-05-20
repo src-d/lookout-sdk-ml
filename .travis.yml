@@ -31,22 +31,26 @@ matrix:
   fast_finish: true
   include:
     - stage: style
+      name: 'Check code style'
       python: 3.7
       script:
         - make check
       install:
         - pip install -r requirements-lint.txt
     - stage: test
+      name: 'Test Python 3.5'
       python: 3.5
       script: *_coverage
       install: *_install
       before_script: *_before_script
     - stage: test
+      name: 'Test Python 3.6'
       python: 3.6
       script: *_coverage
       install: *_install
       before_script: *_before_script
     - stage: test
+      name: 'Test Python 3.7'
       python: 3.7
       script: *_coverage
       install: *_install
@@ -54,6 +58,7 @@ matrix:
       after_success:
         - codecov
     - stage: test
+      name: "Test inside docker and build docs"
       python: 3.7
       script:
         - make docs
@@ -64,6 +69,7 @@ matrix:
         - cd $(pwd)
       before_script: *_before_script
     - stage: deploy
+      name: 'Upload package to Pypi'
       python: 3.5
       install:
         - pip install --upgrade pip
