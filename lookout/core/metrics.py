@@ -78,7 +78,7 @@ class ConfidentCounter(MetricWrapperBase):
         )
 
 
-def submit_event(key: str, value: Union[int, float, bool], description: str = ""):
+def record_event(key: str, value: Union[int, float, bool], description: str = ""):
     """Register an event by a key and with a numeric value.
 
     If the key does not exist, it creates a new Prometheus Metric.

@@ -3,7 +3,7 @@ import unittest
 
 import requests
 
-from lookout.core.metrics import ConfidentCounter, PreciseFloat, submit_event
+from lookout.core.metrics import ConfidentCounter, PreciseFloat, record_event
 
 
 class MetricReader:
@@ -83,7 +83,7 @@ def dummy_server():
 
     if server is None:
         try:
-            submit_event("start_server_hack", 8000)
+            record_event("start_server_hack", 8000)
         except OSError as e:
             raise e
         from lookout.core.metrics import _prometheus_server as server
@@ -182,9 +182,9 @@ class TestSubmitEvent(unittest.TestCase):
 
     def test_send_new_scalar(self):
         name = "a_float"
-        submit_event(name, 3.1)
+        record_event(name, 3.1)
         self.reader.parse_data()
         self.assertTrue(self.reader.metrics["{}_sum".format(name)] == 3.1)
-        submit_event(name, 5.1)
+        record_event(name, 5.1)
         self.reader.parse_data()
         self.assertTrue(self.reader.metrics["{}_sum".format(name)] == 8.2)
