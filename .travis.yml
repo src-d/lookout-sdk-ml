@@ -83,5 +83,10 @@ matrix:
         skip_cleanup: true
         on:
           tags: true
+    - name: "Push image to Docker Hub"
+      python: 3.5
+      stage: deploy
+      script:
+        - DOCKER_PUSH_LATEST=true make docker-push
 notifications:
   email: false
