@@ -15,7 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import create_database, database_exists
 
 from lookout.core.analyzer import AnalyzerModel
-from lookout.core.metrics import submit_event
+from lookout.core.metrics import record_event
 from lookout.core.model_repository import ModelRepository
 from lookout.core.ports import Type
 
@@ -113,15 +113,15 @@ class SQLAlchemyModelRepository(ModelRepository):
     def get(self, model_id: str, model_type: Type[AnalyzerModel],
             url: str) -> Tuple[Optional[AnalyzerModel], bool]:  # noqa: D102
         cache_key = self.cache_key(model_id, model_type, url)
-        submit_event("SQLAlchemyModelRepository.cache.length", len(self._cache))
-        submit_event("SQLAlchemyModelRepository.cache.size", self._cache.currsize)
+        record_event("SQLAlchemyModelRepository.cache.length", len(self._cache))
+        record_event("SQLAlchemyModelRepository.cache.size", self._cache.currsize)
         with self._cache_lock:
             model = self._cache.get(cache_key)
         if model is not None:
             self._log.debug("used cache for %s with %s", model_id, url)
-            submit_event("SQLAlchemyModelRepository.cache.hit", 1)
+            record_event("SQLAlchemyModelRepository.cache.hit", 1)
             return model, False
-        submit_event("SQLAlchemyModelRepository.cache.miss", 1)
+        record_event("SQLAlchemyModelRepository.cache.miss", 1)
         with self._sessionmaker() as session:
             models = self._get_query(session).params(analyzer=model_id, repository=url).all()
         if len(models) == 0:

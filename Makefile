@@ -12,7 +12,7 @@ test:
 
 .PHONY: docs
 docs:
-	cd docs && python3 -msphinx -M html . build
+	cd docs && python3 -m sphinx -M html . build
 
 .PHONY: docker-build
 docker-build:

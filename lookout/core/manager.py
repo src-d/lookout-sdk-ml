@@ -9,7 +9,7 @@ from lookout.core.api.event_pb2 import PushEvent, ReviewEvent
 from lookout.core.api.service_analyzer_pb2 import EventResponse
 from lookout.core.data_requests import DataService
 from lookout.core.event_listener import EventHandlers
-from lookout.core.metrics import submit_event
+from lookout.core.metrics import record_event
 from lookout.core.model_repository import ModelRepository
 from lookout.core.ports import Type
 
@@ -70,17 +70,17 @@ class AnalyzerManager(EventHandlers):
                 model = self._get_model(analyzer, base_ptr.url)
                 if model is None:
                     self._log.info("training: %s", analyzer.name)
-                    submit_event("%s.train" % analyzer.name, 1)
+                    record_event("%s.train" % analyzer.name, 1)
                     model = analyzer.train(base_ptr, mycfg, self._data_service)
                     self._model_repository.set(self._model_id(analyzer), base_ptr.url, model)
             else:
                 model = DummyAnalyzerModel()
             self._log.debug("running %s", analyzer.name)
-            submit_event("%s.analyze" % analyzer.name, 1)
+            record_event("%s.analyze" % analyzer.name, 1)
             results = analyzer(model, head_ptr.url, mycfg).analyze(
                 base_ptr, head_ptr, self._data_service)
             self._log.info("%s: %d comments", analyzer.name, len(results))
-            submit_event("%s.comments" % analyzer.name, len(results))
+            record_event("%s.comments" % analyzer.name, len(results))
             comments.extend(results)
         response.comments.extend(comments)
         return response
@@ -105,7 +105,7 @@ class AnalyzerManager(EventHandlers):
                     self._log.info("skipped training %s", analyzer.name)
                     continue
             self._log.debug("training %s", analyzer.name)
-            submit_event("%s.train" % analyzer.name, 1)
+            record_event("%s.train" % analyzer.name, 1)
             model = analyzer.train(ptr, mycfg, data_service)
             self._model_repository.set(self._model_id(analyzer), ptr.url, model)
         response = EventResponse()
